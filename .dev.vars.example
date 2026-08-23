@@ -1,0 +1,5 @@
+# Local development only. The bypass is accepted exclusively on localhost or
+# 127.0.0.1, never on a deployed hostname.
+DEV_AUTH_BYPASS=true
+OWNER_EMAIL=you@gmail.com
+OWNER_HOST=localhost

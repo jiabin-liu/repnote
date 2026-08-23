@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1785560492911,
+      "tag": "0000_cool_mephisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785571460140,
+      "tag": "0001_secret_rattler",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786516840772,
+      "tag": "0002_mysterious_epoch",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787451380211,
+      "tag": "0003_first_mother_askani",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787452000000,
+      "tag": "0004_seed_exercises",
+      "breakpoints": true
+    }
+  ]
+}
