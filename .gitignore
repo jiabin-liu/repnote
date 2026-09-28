@@ -42,3 +42,6 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# private deployment config (real hostname, email, account and D1 IDs)
+wrangler.production.jsonc

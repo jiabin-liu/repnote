@@ -13,7 +13,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "db:migrate:remote": "wrangler d1 migrations apply repnote --remote",
-    "deploy:cloudflare": "vinext build && wrangler deploy"
+    "deploy:cloudflare": "vinext build && wrangler deploy",
+    "deploy:production": "vinext build && wrangler deploy --config wrangler.production.jsonc"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
