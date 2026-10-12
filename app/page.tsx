@@ -46,6 +46,10 @@ const formatDate = (iso: string) => new Intl.DateTimeFormat("en-US", { year: "nu
 const formatBuildTime = (iso: string) => new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(iso));
 const formatRecordDate = (date: string) => new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
 const formatMonthName = (month: string | number) => new Intl.DateTimeFormat("en-US", { month: "long" }).format(new Date(2000, Number.parseInt(String(month), 10) - 1, 1));
+const LIFT_RECORD_NAMES = ["Bulgarian Split Squat", "Barbell Squat", "Bicep Curl", "Single Leg Deadlift"] as const;
+type LiftBest = { kg: number; reps: number | null; date: string };
+const ACTIVITY_DAYS = 30;
+const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const localDateKey = () => new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const dateFromWorkout = (workout: Workout) => new Date(`${workout.date}T12:00:00`);
 const duration = (start: string, end?: string) => {
@@ -499,29 +503,43 @@ function RepnoteApp() {
     ? history.filter((workout) => workout.exercises.some((exercise) => exercise.name === exerciseFilter))
     : history, [exerciseFilter, history]);
 
-  const bigThreeRecords = useMemo(() => {
-    const liftNames = ["Bench Press", "Squat", "Deadlift"] as const;
-    const records = liftNames.map((name) => {
-      let best: { kg: number; date: string } | null = null;
-      history.forEach((workout) => {
-        workout.exercises.filter((exercise) => exercise.name === name).forEach((exercise) => {
-          exercise.sets.forEach((set) => {
-            const weight = Number.parseFloat(set.weight);
-            if (!Number.isFinite(weight) || weight <= 0) return;
-            const kg = workout.unit === "lbs" ? weight / 2.2046226218 : weight;
-            if (!best || kg > best.kg || (Math.abs(kg - best.kg) < 0.0001 && workout.date < best.date)) best = { kg, date: workout.date };
-          });
+  const liftRecords = useMemo(() => LIFT_RECORD_NAMES.map((name) => {
+    let best = null as LiftBest | null;
+    history.forEach((workout) => {
+      workout.exercises.filter((exercise) => exercise.name === name).forEach((exercise) => {
+        exercise.sets.forEach((set) => {
+          const weight = Number.parseFloat(set.weight);
+          if (!Number.isFinite(weight) || weight <= 0) return;
+          const kg = workout.unit === "lbs" ? weight / 2.2046226218 : weight;
+          const reps = Number.parseInt(set.reps, 10);
+          const candidate = { kg, reps: Number.isFinite(reps) && reps > 0 ? reps : null, date: workout.date };
+          // Heaviest weight wins; at equal weight, more reps, then the earliest date.
+          const sameWeight = best && Math.abs(kg - best.kg) < 0.0001;
+          if (!best || (!sameWeight && kg > best.kg) || (sameWeight && ((candidate.reps ?? 0) > (best.reps ?? 0) || ((candidate.reps ?? 0) === (best.reps ?? 0) && workout.date < best.date)))) best = candidate;
         });
       });
-      return { name, best };
     });
-    return { records, totalKg: records.reduce((sum, record) => sum + (record.best?.kg ?? 0), 0) };
-  }, [history]);
+    return { name, best };
+  }), [history]);
 
-  const trainingStats = useMemo(() => {
-    const workoutDays = new Set(history.filter((workout) => workout.exercises.length > 0).map((workout) => workout.date)).size;
-    const firstWorkoutDate = history.filter((workout) => workout.exercises.length > 0).reduce<string | null>((first, workout) => !first || workout.date < first ? workout.date : first, null);
-    return { workoutDays, firstWorkoutDate };
+  const recentActivity = useMemo(() => {
+    const today = new Date(`${localDateKey()}T12:00:00`);
+    const setsByDate = new Map<string, number>();
+    history.forEach((workout) => {
+      if (workout.exercises.length === 0) return;
+      const sets = workout.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+      setsByDate.set(workout.date, (setsByDate.get(workout.date) ?? 0) + Math.max(sets, 1));
+    });
+    const days = Array.from({ length: ACTIVITY_DAYS }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (ACTIVITY_DAYS - 1 - index));
+      const key = dateKey(date);
+      const sets = setsByDate.get(key) ?? 0;
+      return { key, sets, level: sets === 0 ? 0 : sets < 10 ? 1 : sets < 20 ? 2 : 3 };
+    });
+    // Pad the first column so rows line up with weekdays (Monday first), like a GitHub contribution graph.
+    const leadingBlanks = (new Date(`${days[0].key}T12:00:00`).getDay() + 6) % 7;
+    return { days, leadingBlanks, workoutDays: days.filter((day) => day.sets > 0).length };
   }, [history]);
 
   const formatHighlightWeight = (kg: number) => {
@@ -744,12 +762,12 @@ function RepnoteApp() {
     <div className="history-screen">
       <section className="training-duration-card" aria-label="Workout overview and controls">
         <div className="training-card-top">
-          <div className="training-card-summary"><strong>{trainingStats.workoutDays}</strong><div><span>Total workouts</span><small>{trainingStats.firstWorkoutDate ? `Since ${formatRecordDate(trainingStats.firstWorkoutDate)}` : "Start your first workout"}</small></div></div>
+          <div className="training-card-summary"><strong>{recentActivity.workoutDays}</strong><div><span>Workouts · past {ACTIVITY_DAYS} days</span><small>{recentActivity.workoutDays ? "Keep it going" : "Start a workout to light up the grid"}</small></div><div className="activity-grid" role="img" aria-label={`Workout days in the past ${ACTIVITY_DAYS} days: ${recentActivity.workoutDays}`}>{/* Cells depend on the browser's local date, so render them only after hydration. */}{ready && Array.from({ length: recentActivity.leadingBlanks }, (_, index) => <i key={`blank-${index}`} className="activity-blank" />)}{ready && recentActivity.days.map((day) => <i key={day.key} className={`activity-cell level-${day.level}`} title={`${formatRecordDate(day.key)}: ${day.sets ? `${day.sets} sets` : "rest"}`} />)}</div></div>
           <button className="history-new-workout" aria-label={draft ? editingWorkoutId ? "Continue editing workout" : "Continue workout" : "Create workout"} title={draft ? "Continue workout" : "Create workout"} onClick={draft ? openDraftView : startWorkout}>{draft ? <FileInput aria-hidden="true" /> : <Plus aria-hidden="true" />}</button>
         </div>
         <div className="training-card-filter"><span>Filter</span><CustomSelect className="exercise-filter" ariaLabel="Filter workouts by exercise" value={exerciseFilter} onChange={setExerciseFilter} options={[{ value: "", label: "All exercises" }, ...exerciseFilterOptions.map((name) => ({ value: name, label: name }))]} /><div className="history-controls"><button type="button" className="collapse-all" aria-label={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} title={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} aria-pressed={allMonthsCollapsed} onClick={toggleAllMonths}>{allMonthsCollapsed ? <ChevronsDown aria-hidden="true" /> : <ChevronsUp aria-hidden="true" />}</button><div className="history-view-switch" aria-label="View mode"><button className={historyView === "list" ? "active" : ""} aria-label="List view" title="List view" aria-pressed={historyView === "list"} onClick={() => setHistoryView("list")}><List aria-hidden="true" /></button><button className={historyView === "calendar" ? "active" : ""} aria-label="Calendar view" title="Calendar view" aria-pressed={historyView === "calendar"} onClick={() => setHistoryView("calendar")}><CalendarDays aria-hidden="true" /></button></div></div></div>
       </section>
-      {history.length > 0 && <section className="big-three-highlight" aria-labelledby="big-three-title"><div className="big-three-heading"><h2 id="big-three-title">Big Three</h2><div className="big-three-meta"><div className={`highlight-unit-toggle ${highlightUnit}`} role="group" aria-label="Big Three weight unit"><button type="button" aria-pressed={highlightUnit === "lbs"} onClick={() => setHighlightUnit("lbs")}>LBS</button><button type="button" aria-pressed={highlightUnit === "kg"} onClick={() => setHighlightUnit("kg")}>KG</button></div></div></div><div className="big-three-grid">{bigThreeRecords.records.map((record) => <div className="big-three-record" key={record.name}><span>{record.name}</span><strong>{record.best ? formatHighlightWeight(record.best.kg) : "—"} <small>{record.best ? highlightUnit : ""}</small></strong><time dateTime={record.best?.date}>{record.best ? formatRecordDate(record.best.date) : "No record"}</time></div>)}<div className="big-three-record total"><span>Total</span><strong>{bigThreeRecords.totalKg > 0 ? formatHighlightWeight(bigThreeRecords.totalKg) : "—"} <small>{bigThreeRecords.totalKg > 0 ? highlightUnit : ""}</small></strong><time>Combined best</time></div></div></section>}
+      {history.length > 0 && <section className="big-three-highlight" aria-labelledby="lift-records-title"><div className="big-three-heading"><h2 id="lift-records-title">Best lifts</h2><div className="big-three-meta"><div className={`highlight-unit-toggle ${highlightUnit}`} role="group" aria-label="Best lifts weight unit"><button type="button" aria-pressed={highlightUnit === "lbs"} onClick={() => setHighlightUnit("lbs")}>LBS</button><button type="button" aria-pressed={highlightUnit === "kg"} onClick={() => setHighlightUnit("kg")}>KG</button></div></div></div><div className="big-three-grid">{liftRecords.map((record) => <div className="big-three-record" key={record.name}><span title={record.name}>{record.name}</span><strong>{record.best ? formatHighlightWeight(record.best.kg) : "—"} <small>{record.best ? highlightUnit : ""}</small></strong><em className="lift-record-reps">{record.best?.reps ? `× ${record.best.reps} ${record.best.reps === 1 ? "rep" : "reps"}` : "\u00a0"}</em><time dateTime={record.best?.date}>{record.best ? formatRecordDate(record.best.date) : "No record"}</time></div>)}</div></section>}
       {history.length === 0 ? <div className="empty-state"><b>No workouts yet</b><p>Create your first workout with the + button above.</p></div> : filteredHistory.length === 0 ? <div className="empty-state filter-empty"><b>No matching workouts</b><p>No workouts contain {exerciseFilter}.</p><button onClick={() => setExerciseFilter("")}>Clear filter</button></div> : historyView === "list" ? Object.entries(grouped).map(([year, months]) => (
         <section className="year-group compact-list-year" key={year}>{Object.entries(months).map(([month, items]) => (
           <div className={`month-group${collapsedMonths.has(`${year}/${month}`) ? " collapsed" : ""}`} key={month}><h4><button type="button" className="month-toggle" aria-expanded={!collapsedMonths.has(`${year}/${month}`)} onClick={() => toggleMonth(`${year}/${month}`)}><span>{formatMonthName(month)} {Number.parseInt(year, 10)}</span><ChevronDown aria-hidden="true" /></button><small>{items.length}</small></h4>{!collapsedMonths.has(`${year}/${month}`) && items.map((item) => <SwipeableHistoryRow key={item.id} workout={item} onOpen={() => openWorkoutDetail(item)} onDelete={() => void deleteWorkout(item)} />)}</div>

@@ -481,6 +481,12 @@ Completed history and the exercise library are cached in local storage to provid
 
 This cache is not the primary database. Workout completion is not considered successful until the server confirms it, and active drafts are persisted in D1.
 
+### 14.4 Workout overview cards
+
+The top card shows how many distinct days had a completed workout in the past 30 days, plus a GitHub-style grid (weeks as columns, Monday-first rows). Cell shade reflects the number of sets that day (1–9, 10–19, 20+). The grid uses the browser's local date and renders only after hydration to avoid a server/client mismatch.
+
+The **Best lifts** card shows, for Bulgarian Split Squat, Barbell Squat, Bicep Curl, and Single Leg Deadlift, the heaviest recorded set and its reps (ties go to more reps, then the earliest date). These are computed client-side from completed history and are independent of the persisted true-1RM PR table.
+
 ## 15. Database migrations
 
 Migrations are append-only and applied in numeric order:
