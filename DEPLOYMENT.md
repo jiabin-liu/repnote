@@ -249,7 +249,7 @@ pnpm exec wrangler d1 migrations apply repnote --remote
 
 Confirm when Wrangler prompts. Wrangler records applied migrations in its D1 migrations table and applies each migration atomically.
 
-The final `0004_seed_exercises.sql` migration inserts 49 exercise names with `INSERT OR IGNORE`. It contains no personal workouts. Verify the remote seed:
+`0004_seed_exercises.sql` inserts 49 exercise names with `INSERT OR IGNORE`, and `0005_replace_exercise_library.sql` then replaces them with the seven curated exercises. Neither contains personal workouts. Verify the remote seed:
 
 ```bash
 pnpm exec wrangler d1 execute repnote --remote --command "SELECT COUNT(*) AS exercise_count FROM exercises WHERE user_id = 'owner';"
@@ -258,7 +258,7 @@ pnpm exec wrangler d1 execute repnote --remote --command "SELECT COUNT(*) AS exe
 Expected result:
 
 ```text
-exercise_count = 49
+exercise_count = 7
 ```
 
 Also verify that no workout data was distributed:
@@ -466,8 +466,8 @@ The human must complete the first Google sign-in in a browser. Passwords, MFA co
 
 Open **Manage exercises** from the Workouts menu. Confirm:
 
-- 49 exercises appear.
-- Bench Press, Deadlift, Pull-Up, Row, and Squat are marked frequent.
+- 7 exercises appear: Bulgarian Split Squat, Single Leg Deadlift, Bench Press, Bicep Curl, Farmer Squat, Barbell Squat, and Leg Extension.
+- All seven are marked frequent.
 - Frequencies begin at zero.
 
 ### 12.4 Draft persistence
@@ -553,7 +553,7 @@ Core tables:
 - `workout_exercises`: ordered exercise instances inside a workout.
 - `workout_sets`: ordered weight/reps/note sets inside an exercise instance.
 - `exercises`: reusable exercise library with frequency and frequent flag.
-- `workout_pr_highlights`: persisted true 1RM PR events for Bench Press, Squat, and Deadlift.
+- `workout_pr_highlights`: persisted true 1RM PR events for Bench Press, Squat (including Barbell Squat), and Deadlift.
 
 Important behavior:
 
@@ -640,7 +640,7 @@ pnpm exec wrangler d1 migrations list repnote --remote
 pnpm exec wrangler d1 migrations apply repnote --remote
 ```
 
-Confirm `0004_seed_exercises.sql` was applied and query the exercise count.
+Confirm `0004_seed_exercises.sql` and `0005_replace_exercise_library.sql` were applied and query the exercise count.
 
 ### Build works locally but custom domain fails
 
@@ -658,7 +658,7 @@ An agent should not declare deployment complete until all boxes are true:
 - [ ] `wrangler.jsonc` contains no example hostname, email, or all-zero D1 UUID.
 - [ ] D1 binding is exactly `DB`.
 - [ ] Remote migrations applied successfully.
-- [ ] Remote exercise count is 49.
+- [ ] Remote exercise count is 7.
 - [ ] Remote workout count was zero before first user test.
 - [ ] Google OAuth redirect uses the Cloudflare Access team callback.
 - [ ] Google Client Secret exists only in Cloudflare's IdP configuration/password manager.

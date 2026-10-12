@@ -59,7 +59,7 @@ db/
   d1.ts                  Cloudflare D1 binding accessor
   schema.ts              Drizzle table definitions
 drizzle/
-  0000...0004.sql        Ordered database migrations and exercise seed
+  0000...0005.sql        Ordered database migrations and exercise library
   meta/                   Drizzle migration journal and schema snapshots
 lib/
   owner-auth.ts           Server-side owner authorization
@@ -233,7 +233,9 @@ This is the reusable exercise library.
 - `is_frequent` controls which exercises appear in the quick-add area.
 - Results are sorted by frequency descending and then name ascending.
 
-The seed migration inserts 49 exercise names, zero workout history, and five frequent exercises.
+Migration `0004` originally seeded 49 exercise names. Migration `0005` replaces the library with seven curated exercises (Bulgarian Split Squat, Single Leg Deadlift, Bench Press, Bicep Curl, Farmer Squat, Barbell Squat, Leg Extension), all marked frequent. It deletes only library rows; completed workouts keep their historical exercise names.
+
+Users can add their own exercises either from **Manage exercises** or directly from the **More exercises** search picker in the workout editor: typing a name that is not yet in the library offers “Add new exercise”, which saves it to D1 through `POST /api/exercises` and adds it to the current workout. Added exercises stay in the library and the picker permanently. The server ignores case-insensitive duplicate names and returns the existing row instead.
 
 ### 7.4 `workout_pr_highlights`
 
@@ -334,7 +336,7 @@ Returns the exercise library as `{ id, name, frequency, isFrequent }` items.
 
 #### `POST /api/exercises`
 
-Adds an exercise. The client may provide an ID; otherwise the server generates a UUID. The current conflict rule is based on ID, not name.
+Adds an exercise. The client may provide an ID; otherwise the server generates a UUID. If an exercise with the same name (case-insensitive) already exists, the existing row is returned and nothing is inserted.
 
 #### `PATCH /api/exercises`
 
@@ -403,7 +405,7 @@ PR highlights are generated in `lib/pr-highlights.ts` with a D1 SQL window-query
 Eligibility is deliberately strict:
 
 - the workout is completed;
-- the exercise name is exactly `Bench Press`, `Squat`, or `Deadlift`;
+- the exercise name is exactly `Bench Press`, `Squat` / `Barbell Squat` (both count as squat), or `Deadlift`;
 - reps equal exactly `1`;
 - weight is positive.
 
@@ -490,6 +492,7 @@ Migrations are append-only and applied in numeric order:
 | `0002` | Persisted Big Three PR highlights and initial backfill |
 | `0003` | Draft/completed status and edit-draft linkage |
 | `0004` | Sanitized 49-exercise seed |
+| `0005` | Replace the library with the seven curated exercises |
 
 After modifying `db/schema.ts`, run:
 
@@ -532,7 +535,8 @@ The checked-in Wrangler file contains placeholders and must not be deployed unch
 - Guest, CLI, docs, and `/v1` route trees are absent;
 - every API route performs owner authorization;
 - the D1 binding and production auth defaults are correct;
-- the seed contains 49 sanitized exercises and no workout records;
+- the seed contains 49 sanitized exercises and no workout records, and `0005` replaces the library with the curated set;
+- no Durable Objects are configured (the app uses only Workers, static assets, and D1);
 - drafts live in D1 and derived calculations read completed workouts only;
 - deployment documentation contains the required handoff steps;
 - obvious embedded credentials are absent.

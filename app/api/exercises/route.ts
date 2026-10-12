@@ -19,6 +19,8 @@ export async function POST(request: Request) {
     const payload = await request.json() as { id?: string; name?: string };
     const name = payload.name?.trim();
     if (!name) return Response.json({ error: "Name is required" }, { status: 400 });
+    const existing = await getD1().prepare("SELECT id, name, training_frequency, is_frequent FROM exercises WHERE user_id = ? AND name = ? COLLATE NOCASE").bind(USER_ID, name).first<{ id: string; name: string; training_frequency: number; is_frequent: number }>();
+    if (existing) return Response.json({ id: existing.id, name: existing.name, frequency: existing.training_frequency, isFrequent: Boolean(existing.is_frequent) });
     const id = payload.id || crypto.randomUUID();
     await getD1().prepare("INSERT INTO exercises (id, user_id, name, training_frequency, is_frequent, created_at) VALUES (?, ?, ?, 0, 0, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name").bind(id, USER_ID, name, new Date().toISOString()).run();
     return Response.json({ id, name, frequency: 0, isFrequent: false });

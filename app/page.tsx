@@ -164,15 +164,19 @@ function SwipeToDelete({ children, label, onDelete, className = "" }: { children
   );
 }
 
-function ExerciseSearchPicker({ options, query, onQueryChange, onChoose }: { options: ExerciseLibraryItem[]; query: string; onQueryChange: (value: string) => void; onChoose: (name: string) => void }) {
+function ExerciseSearchPicker({ options, query, onQueryChange, onChoose, canCreate, onCreate }: { options: ExerciseLibraryItem[]; query: string; onQueryChange: (value: string) => void; onChoose: (name: string) => void; canCreate: (name: string) => boolean; onCreate: (name: string) => void }) {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const matches = options.filter((item) => !normalizedQuery || item.name.toLocaleLowerCase().includes(normalizedQuery));
+  const newName = query.trim();
+  const showCreate = Boolean(newName) && canCreate(newName);
 
   return (
     <div className="exercise-search-picker">
-      <label className="exercise-search-field"><Search aria-hidden="true" /><span>Search exercises</span><input autoFocus aria-label="Search exercises" role="combobox" aria-controls="exercise-search-results" aria-expanded="true" aria-autocomplete="list" value={query} onChange={(event) => onQueryChange(event.target.value)} /></label>
+      <label className="exercise-search-field"><Search aria-hidden="true" /><span>Search exercises</span><input autoFocus aria-label="Search exercises" role="combobox" aria-controls="exercise-search-results" aria-expanded="true" aria-autocomplete="list" value={query} onChange={(event) => onQueryChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && showCreate && !matches.some((item) => item.name.toLocaleLowerCase() === normalizedQuery)) onCreate(newName); }} /></label>
       <div className="exercise-search-results" id="exercise-search-results" role="listbox" aria-label="Exercise results">
-        {matches.length ? matches.map((item) => <button type="button" role="option" aria-selected="false" key={item.id} onClick={() => onChoose(item.name)}>{item.name}<Plus aria-hidden="true" /></button>) : <p>No matching exercises</p>}
+        {matches.map((item) => <button type="button" role="option" aria-selected="false" key={item.id} onClick={() => onChoose(item.name)}>{item.name}<Plus aria-hidden="true" /></button>)}
+        {showCreate && <button type="button" role="option" aria-selected="false" className="exercise-search-create" onClick={() => onCreate(newName)}>Add new exercise “{newName}”<Plus aria-hidden="true" /></button>}
+        {!matches.length && !showCreate && <p>{newName ? "Already in this workout" : "Type a name to add a new exercise"}</p>}
       </div>
     </div>
   );
@@ -623,19 +627,25 @@ function RepnoteApp() {
   };
   const exerciseOptions = exerciseLibrary.map((item) => item.name);
   const frequentExercises = exerciseLibrary.filter((item) => item.isFrequent);
-  const rareExercises = exerciseLibrary.filter((item) => !item.isFrequent);
   const addExercise = (name: string) => {
     const clean = name.trim();
     if (!clean || !draft) return;
     setDraft({ ...draft, exercises: [...draft.exercises, { id: makeId(), name: clean, sets: [emptySet()] }] });
   };
-  const saveCustomExercise = () => {
-    const clean = newExercise.trim();
-    if (!clean || exerciseOptions.some((name) => name.toLocaleLowerCase() === clean.toLocaleLowerCase())) return;
+  const isNewExerciseName = (name: string) => !exerciseOptions.some((option) => option.toLocaleLowerCase() === name.trim().toLocaleLowerCase());
+  const createLibraryExercise = (name: string) => {
+    const clean = name.trim();
+    if (!clean || !isNewExerciseName(clean)) return false;
     const item = { id: `library-${makeId()}`, name: clean, frequency: 0, isFrequent: false };
     setExerciseLibrary((items) => [...items, item]);
-    setNewExercise("");
-    void fetch(`${apiBase}/exercises`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) }).then((response) => { if (!response.ok) throw new Error("Save failed"); }).catch(() => setPermissionError("Exercise could not be saved. Check your connection and try again."));
+    void fetch(`${apiBase}/exercises`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) }).then((response) => { if (!response.ok) throw new Error("Save failed"); }).catch(() => {
+      setExerciseLibrary((items) => items.filter((candidate) => candidate.id !== item.id));
+      setPermissionError("Exercise could not be saved. Check your connection and try again.");
+    });
+    return true;
+  };
+  const saveCustomExercise = () => {
+    if (createLibraryExercise(newExercise)) setNewExercise("");
   };
   const toggleFrequentExercise = (item: ExerciseLibraryItem) => {
     const isFrequent = !item.isFrequent;
@@ -779,7 +789,7 @@ function RepnoteApp() {
               <label className="note-card"><span>Notes</span><textarea aria-label="Workout notes" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} /></label>
               <section className="session-unit-picker" aria-label="Weight unit"><div className={`weight-unit-toggle ${(draft.unit ?? "lbs") === "lbs" ? "lbs" : "kg"}`} role="group" aria-label="Weight unit"><span className="weight-unit-thumb" aria-hidden="true" /><button type="button" aria-pressed={(draft.unit ?? "lbs") === "lbs"} onClick={() => setDraft({ ...draft, unit: "lbs" })}>LBS</button><button type="button" aria-pressed={(draft.unit ?? "lbs") === "kg"} onClick={() => setDraft({ ...draft, unit: "kg" })}>KG</button></div></section>
 
-              <div className="quick-add"><div className="quick-add-options">{frequentExercises.map((item) => <button key={item.id} disabled={draft.exercises.some((ex) => ex.name === item.name)} onClick={() => addExercise(item.name)}>＋ {item.name}</button>)}<button className="rare-exercise-toggle" aria-expanded={showRareExercises} onClick={() => { setRareExercise(""); setShowRareExercises((value) => !value); }}><span>More exercises</span><ChevronDown aria-hidden="true" /></button></div>{showRareExercises && <ExerciseSearchPicker options={rareExercises.filter((item) => !draft.exercises.some((exercise) => exercise.name === item.name))} query={rareExercise} onQueryChange={setRareExercise} onChoose={(name) => { addExercise(name); setRareExercise(""); setShowRareExercises(false); }} />}</div>
+              <div className="quick-add"><div className="quick-add-options">{frequentExercises.map((item) => <button key={item.id} disabled={draft.exercises.some((ex) => ex.name === item.name)} onClick={() => addExercise(item.name)}>＋ {item.name}</button>)}<button className="rare-exercise-toggle" aria-expanded={showRareExercises} onClick={() => { setRareExercise(""); setShowRareExercises((value) => !value); }}><span>More exercises</span><ChevronDown aria-hidden="true" /></button></div>{showRareExercises && <ExerciseSearchPicker options={exerciseLibrary.filter((item) => !draft.exercises.some((exercise) => exercise.name === item.name))} query={rareExercise} onQueryChange={setRareExercise} onChoose={(name) => { addExercise(name); setRareExercise(""); setShowRareExercises(false); }} canCreate={isNewExerciseName} onCreate={(name) => { if (createLibraryExercise(name)) addExercise(name); setRareExercise(""); setShowRareExercises(false); }} />}</div>
 
               <div className="exercise-list">
                 {draft.exercises.map((exercise, index) => (

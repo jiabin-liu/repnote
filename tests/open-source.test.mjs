@@ -60,6 +60,29 @@ test("ships a sanitized 49-exercise seed and no workouts", async () => {
   assert.doesNotMatch(seed, /INSERT[^;]+workouts/i);
 });
 
+test("replaces the library with the curated exercise set and lets users add exercises", async () => {
+  const [migration, page, route, pr] = await Promise.all([
+    read("drizzle/0005_replace_exercise_library.sql"),
+    read("app/page.tsx"),
+    read("app/api/exercises/route.ts"),
+    read("lib/pr-highlights.ts"),
+  ]);
+  const names = ["Bulgarian Split Squat", "Single Leg Deadlift", "Bench Press", "Bicep Curl", "Farmer Squat", "Barbell Squat", "Leg Extension"];
+  for (const name of names) assert.match(migration, new RegExp(`SELECT 'exercise-[a-z-]+', 'owner', '${name}'`));
+  assert.match(migration, /DELETE FROM `exercises`/);
+  assert.doesNotMatch(migration, /DELETE FROM `?(workouts|workout_exercises|workout_sets)`?/i);
+  assert.match(page, /Add new exercise/);
+  assert.match(page, /onCreate=\{/);
+  assert.match(route, /COLLATE NOCASE/);
+  assert.match(pr, /WHEN 'Barbell Squat' THEN 'squat'/);
+});
+
+test("uses no Durable Objects or other per-request stateful bindings", async () => {
+  const [wrangler, worker] = await Promise.all([read("wrangler.jsonc"), read("worker/index.ts")]);
+  assert.doesNotMatch(wrangler, /durable_objects|"migrations"\s*:\s*\[/);
+  assert.doesNotMatch(worker, /DurableObject/);
+});
+
 test("persists drafts in D1 and computes derived data from completed workouts", async () => {
   const [schema, data, writer, pr, page] = await Promise.all([
     read("db/schema.ts"),
