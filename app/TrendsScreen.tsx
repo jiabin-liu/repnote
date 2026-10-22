@@ -7,8 +7,18 @@ type TrendWorkout = { date: string; unit?: "kg" | "lbs"; activity?: string; exer
 type Unit = "kg" | "lbs";
 type Point = { date: string; t: number; value: number; reps: number | null };
 
-// Exercises shown top to bottom. Each matches logged names loosely ("Lat Pull Down" = "Lat Pulldown").
-const TREND_EXERCISES = ["Bulgarian Split Squat", "Bicep Curl", "Lat Pulldown", "Barbell Squat", "Single Leg Deadlift", "Face Pull"];
+// Exercises shown top to bottom, with the other names they have been logged under.
+// Matching ignores case, spaces and punctuation, so "Lat Pull Down" = "Lat Pulldown".
+const TREND_EXERCISES: { name: string; aliases: string[] }[] = [
+  { name: "Bulgarian Split Squat", aliases: [] },
+  { name: "Bicep Curl", aliases: ["Biceps Curl"] },
+  { name: "Lat Pulldown", aliases: [] },
+  { name: "Barbell Squat", aliases: [] },
+  { name: "Single Leg Deadlift", aliases: [] },
+  { name: "Face Pull", aliases: ["Cable Face Pull"] },
+];
+// Weights of 0 or 1 are placeholders (bodyweight / not recorded), not real loads.
+const MIN_TREND_WEIGHT = 1;
 const LOOKBACK_DAYS = 730;
 const KG_PER_LB = 0.45359237;
 const normalize = (name: string) => name.toLocaleLowerCase().replace(/[^a-z]/g, "");
@@ -101,18 +111,22 @@ export default function TrendsScreen({ history, unit, onUnitChange }: { history:
     const endTime = end.getTime();
     const startTime = endTime - LOOKBACK_DAYS * dayMs;
     const byExercise = new Map<string, Map<string, Point>>();
-    TREND_EXERCISES.forEach((name) => byExercise.set(normalize(name), new Map()));
+    const keyByName = new Map<string, string>();
+    TREND_EXERCISES.forEach(({ name, aliases }) => {
+      byExercise.set(name, new Map());
+      [name, ...aliases].forEach((alias) => keyByName.set(normalize(alias), name));
+    });
     history.forEach((workout) => {
       if (workout.activity && workout.activity !== "strength") return;
       const t = toTime(workout.date);
       if (t < startTime || t > endTime + dayMs) return;
       workout.exercises.forEach((exercise) => {
-        const key = normalize(exercise.name);
-        const days = byExercise.get(key);
+        const key = keyByName.get(normalize(exercise.name));
+        const days = key ? byExercise.get(key) : undefined;
         if (!days) return;
         exercise.sets.forEach((set) => {
           const weight = Number.parseFloat(set.weight);
-          if (!Number.isFinite(weight) || weight <= 0) return;
+          if (!Number.isFinite(weight) || weight <= MIN_TREND_WEIGHT) return;
           const kg = workout.unit === "lbs" ? weight * KG_PER_LB : weight;
           const value = unit === "lbs" ? kg / KG_PER_LB : kg;
           const reps = Number.parseInt(set.reps, 10);
@@ -125,14 +139,14 @@ export default function TrendsScreen({ history, unit, onUnitChange }: { history:
     return {
       startT: startTime,
       endT: endTime,
-      series: TREND_EXERCISES.map((name) => ({ name, points: [...(byExercise.get(normalize(name))?.values() ?? [])].sort((a, b) => a.t - b.t) })),
+      series: TREND_EXERCISES.map(({ name }) => ({ name, points: [...(byExercise.get(name)?.values() ?? [])].sort((a, b) => a.t - b.t) })),
     };
   }, [history, unit]);
 
   return (
     <div className="trends-screen">
       <div className="trends-heading">
-        <p>Heaviest set per session · last 2 years</p>
+        <p>Heaviest set each day · last 2 years</p>
         <div className={`highlight-unit-toggle ${unit}`} role="group" aria-label="Trend weight unit"><button type="button" aria-pressed={unit === "lbs"} onClick={() => onUnitChange("lbs")}>LBS</button><button type="button" aria-pressed={unit === "kg"} onClick={() => onUnitChange("kg")}>KG</button></div>
       </div>
       {series.map((item) => <TrendChart key={item.name} name={item.name} points={item.points} unit={unit} startT={startT} endT={endT} />)}
