@@ -1,0 +1,65 @@
+name: Deploy
+
+# Every push to main is tested, has its D1 migrations applied, and is deployed.
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN        Cloudflare API token (Workers Scripts: Edit, D1: Edit, Workers Routes: Edit)
+#   WRANGLER_PRODUCTION_CONFIG  full contents of your local wrangler.production.jsonc
+# Without them the workflow only runs tests and skips deployment.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "LICENSE"]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WRANGLER_PRODUCTION_CONFIG: ${{ secrets.WRANGLER_PRODUCTION_CONFIG }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+
+      - name: Check deployment secrets
+        id: secrets
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$WRANGLER_PRODUCTION_CONFIG" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::CLOUDFLARE_API_TOKEN or WRANGLER_PRODUCTION_CONFIG is not set; skipping deployment."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write production wrangler config
+        if: steps.secrets.outputs.ready == 'true'
+        run: printf '%s' "$WRANGLER_PRODUCTION_CONFIG" > wrangler.production.jsonc
+
+      - name: Apply remote D1 migrations
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          DB_NAME=$(node -e 'const s=require("fs").readFileSync("wrangler.production.jsonc","utf8"); const m=s.match(/"database_name"\s*:\s*"([^"]+)"/); if(!m) process.exit(1); console.log(m[1])')
+          pnpm exec wrangler d1 migrations apply "$DB_NAME" --remote --config wrangler.production.jsonc
+
+      - name: Deploy Worker
+        if: steps.secrets.outputs.ready == 'true'
+        run: pnpm deploy:production
+
+      - name: Remove production config
+        if: always()
+        run: rm -f wrangler.production.jsonc
