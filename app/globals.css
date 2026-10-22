@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { --activity-strength:#e2d6f8; --activity-strength-edge:#c3b0ec; --activity-climbing:#f4a6c0; --activity-cardio:#c8eedc; --activity-cardio-edge:#98d4b8; --activity-ski:#f6d47c; --ink:#6b5670; --paper:#fff6fa; --card:rgba(255,255,255,.7); --lime:#f9b9cf; --line:#f1d9e5; --muted:#827383; --dream-pink:#ffd3e4; --dream-lilac:#e8dcff; --dream-sky:#d6ecff; --glow:0 10px 28px rgba(240,150,190,.18); --font-sans:"Nunito Variable", "Nunito", ui-rounded, "SF Pro Rounded", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; --font-serif:"Fredoka Variable", "Fredoka", ui-rounded, "SF Pro Rounded", "PingFang SC", sans-serif; }
+:root { --activity-strength:#e2d6f8; --activity-strength-edge:#c3b0ec; --activity-climbing:#f4a6c0; --activity-cardio:#cfe5fb; --activity-cardio-edge:#97c3ec; --activity-ski:#f6d47c; --ink:#6b5670; --paper:#fff6fa; --card:rgba(255,255,255,.7); --lime:#f9b9cf; --line:#f1d9e5; --muted:#827383; --dream-pink:#ffd3e4; --dream-lilac:#e8dcff; --dream-sky:#d6ecff; --glow:0 10px 28px rgba(240,150,190,.18); --font-sans:"Nunito Variable", "Nunito", ui-rounded, "SF Pro Rounded", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; --font-serif:"Fredoka Variable", "Fredoka", ui-rounded, "SF Pro Rounded", "PingFang SC", sans-serif; }
 * { box-sizing:border-box; }
 html { background:#e5d7de; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:var(--font-sans); font-variant-numeric:lining-nums tabular-nums; }
@@ -411,3 +411,32 @@ body { background:transparent; }
 .calendar-cell button.activity-cardio { box-shadow:inset 0 0 0 1.5px var(--activity-cardio-edge),0 3px 8px rgba(150,200,180,.18); }
 .activity-dot.activity-cardio,.history-activity-name.activity-cardio>i { background:var(--activity-cardio); box-shadow:inset 0 0 0 1px var(--activity-cardio-edge); }
 .day-entry.activity-cardio { border-left-color:var(--activity-cardio-edge) !important; }
+
+/* ♡ Puffy floating hearts for workout days ♡ */
+:root { --heart-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21.2C11.6 20.9 1 13.8 1 7.1 1 3.7 3.6 1 6.9 1c2.1 0 3.9 1.1 5.1 2.8C13.2 2.1 15 1 17.1 1 20.4 1 23 3.7 23 7.1c0 6.7-10.6 13.8-11 14.1z'/%3E%3C/svg%3E"); }
+.calendar-cell { height:50px; }
+.calendar-cell:has(> button) { filter:drop-shadow(0 0 .6px rgba(160,120,170,.55)) drop-shadow(0 5px 5px rgba(232,150,190,.32)); transition:transform .18s ease; }
+.calendar-cell:has(> button.activity-strength),.calendar-cell:has(> button:not(.activity-climbing):not(.activity-cardio):not(.activity-ski):not(.activity-mixed)) { filter:drop-shadow(0 0 1px var(--activity-strength-edge)) drop-shadow(0 5px 5px rgba(190,160,240,.35)); }
+.calendar-cell:has(> button.activity-cardio) { filter:drop-shadow(0 0 1px var(--activity-cardio-edge)) drop-shadow(0 5px 5px rgba(140,190,240,.35)); }
+.calendar-cell:has(> button.activity-ski) { filter:drop-shadow(0 0 1px #e5b94f) drop-shadow(0 5px 5px rgba(240,200,110,.35)); }
+.calendar-cell button,.calendar-cell button:hover,.calendar-cell button.activity-cardio,.calendar-cell button.activity-ski,.calendar-cell button.pr-day,.calendar-cell button.pr-day:hover,.calendar-cell button.today {
+  position:relative; width:42px; height:39px; padding:0 0 5px; border-radius:0; box-shadow:none !important; outline:none;
+  -webkit-mask:var(--heart-mask) center/contain no-repeat; mask:var(--heart-mask) center/contain no-repeat;
+  transform:translateY(-3px); transition:transform .18s ease, filter .18s ease; font-weight:700; }
+.calendar-cell button::before { content:""; position:absolute; inset:0; background:radial-gradient(ellipse 34% 26% at 30% 26%, rgba(255,255,255,.85), transparent 70%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,255,255,0), rgba(120,80,140,.08)); pointer-events:none; }
+.calendar-cell button:hover { transform:translateY(-6px) scale(1.06); filter:none; }
+.calendar-cell button:active { transform:translateY(-1px) scale(.96); }
+.calendar-cell button:focus-visible { filter:brightness(.92); }
+.calendar-cell:has(> button.pr-day)::after { content:"★"; position:absolute; margin:-30px 0 0 30px; color:#f2a3bf; font-size:11px; text-shadow:0 0 3px #fff; }
+.calendar-cell:has(> button.pr-day) { position:relative; }
+.calendar-cell:has(> button.today) { text-decoration:none; }
+.calendar-cell:has(> button.today)::before { content:""; position:absolute; bottom:1px; width:14px; height:3px; border-radius:2px; background:#e889ad; }
+.calendar-cell:has(> button.today) { position:relative; }
+
+/* mini 3-month grid: little hearts for workout days, soft dots for rest */
+.activity-month-grid button { border-radius:0; box-shadow:none !important; -webkit-mask:var(--heart-mask) center/contain no-repeat; mask:var(--heart-mask) center/contain no-repeat; transform:translateY(-1px); }
+.activity-month-grid button:hover { transform:translateY(-2px) scale(1.18); }
+.activity-month-grid .activity-cell.rest,.activity-month-grid .activity-cell.future { border-radius:50%; transform:scale(.55); }
+.activity-month-grid .activity-cell.rest.today,.activity-month-grid .activity-cell.future.today { transform:scale(.8); box-shadow:inset 0 0 0 2px #e889ad !important; background:#fff; }
+.activity-month-grid button.activity-strength { background:#d9c9f6; }
+.activity-month-grid button.activity-cardio { background:#bcdaf8; }
