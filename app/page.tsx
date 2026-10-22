@@ -45,8 +45,9 @@ const formatPrWeight = (weight: number) => new Intl.NumberFormat("en-US", { maxi
 
 const HISTORY_KEY = "repnote-history-v1";
 const BACKGROUND_KEY = "repnote-background-updated-v1";
+const BUTTON_IMAGE_KEY = "repnote-button-image-updated-v1";
 // Shrink a picked photo to a JPEG data URL small enough for one D1 value.
-const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82) => {
+const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82, type: "image/jpeg" | "image/png" = "image/jpeg") => {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
@@ -54,6 +55,7 @@ const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82) =>
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
+  if (type === "image/png") return canvas.toDataURL("image/png");
   let dataUrl = canvas.toDataURL("image/jpeg", quality);
   for (let q = quality - 0.12; dataUrl.length > 1_700_000 && q > 0.4; q -= 0.12) dataUrl = canvas.toDataURL("image/jpeg", q);
   return dataUrl;
@@ -209,6 +211,8 @@ function RepnoteApp() {
   const [backgroundUpdatedAt, setBackgroundUpdatedAt] = useState<string | null>(null);
   const [backgroundSaving, setBackgroundSaving] = useState(false);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const [buttonImageUpdatedAt, setButtonImageUpdatedAt] = useState<string | null>(null);
+  const buttonImageInputRef = useRef<HTMLInputElement>(null);
   const versionMenuRef = useRef<HTMLDivElement>(null);
   const workoutMenuRef = useRef<HTMLDivElement>(null);
   const draftTouchStart = useRef<{ x: number; y: number } | null>(null);
@@ -344,6 +348,11 @@ function RepnoteApp() {
       setHistory(localHistory);
       setExerciseLibrary(localExercises);
       setBackgroundUpdatedAt(localStorage.getItem(BACKGROUND_KEY));
+      setButtonImageUpdatedAt(localStorage.getItem(BUTTON_IMAGE_KEY));
+      fetch("/api/background?slot=button&meta=1").then((response) => response.ok ? response.json() : Promise.reject()).then((data: { updatedAt: string | null }) => {
+        setButtonImageUpdatedAt(data.updatedAt);
+        if (data.updatedAt) localStorage.setItem(BUTTON_IMAGE_KEY, data.updatedAt); else localStorage.removeItem(BUTTON_IMAGE_KEY);
+      }).catch(() => undefined);
       fetch("/api/background?meta=1").then((response) => response.ok ? response.json() : Promise.reject()).then((data: { updatedAt: string | null }) => {
         setBackgroundUpdatedAt(data.updatedAt);
         if (data.updatedAt) localStorage.setItem(BACKGROUND_KEY, data.updatedAt); else localStorage.removeItem(BACKGROUND_KEY);
@@ -616,6 +625,36 @@ function RepnoteApp() {
       if (backgroundInputRef.current) backgroundInputRef.current.value = "";
     }
   };
+  const changeButtonImage = async (file: File | undefined) => {
+    if (!file) return;
+    setShowWorkoutMenu(false);
+    try {
+      // Keep transparency (PNG) and a small size; this only ever renders at ~80px.
+      const dataUrl = await imageFileToDataUrl(file, 360, 0.9, "image/png");
+      const response = await fetch("/api/background?slot=button", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataUrl }) });
+      if (!response.ok) throw new Error("Save failed");
+      const { updatedAt } = await response.json() as { updatedAt: string };
+      setButtonImageUpdatedAt(updatedAt);
+      try { localStorage.setItem(BUTTON_IMAGE_KEY, updatedAt); } catch { /* convenience only */ }
+    } catch {
+      setPermissionError("Button picture could not be saved. Try a smaller image or check your connection.");
+    } finally {
+      if (buttonImageInputRef.current) buttonImageInputRef.current.value = "";
+    }
+  };
+  const removeButtonImage = async () => {
+    setShowWorkoutMenu(false);
+    const previous = buttonImageUpdatedAt;
+    setButtonImageUpdatedAt(null);
+    try {
+      const response = await fetch("/api/background?slot=button", { method: "DELETE" });
+      if (!response.ok) throw new Error("Remove failed");
+      try { localStorage.removeItem(BUTTON_IMAGE_KEY); } catch { /* ignore */ }
+    } catch {
+      setButtonImageUpdatedAt(previous);
+      setPermissionError("Button picture could not be removed. Check your connection and try again.");
+    }
+  };
   const removeBackground = async () => {
     setShowWorkoutMenu(false);
     const previous = backgroundUpdatedAt;
@@ -849,10 +888,11 @@ function RepnoteApp() {
     <main className={`app-shell${backgroundUpdatedAt ? " has-photo-background" : ""}`}>
       <div className="app-backdrop" aria-hidden="true" style={backgroundUpdatedAt ? { backgroundImage: `url(/api/background?v=${encodeURIComponent(backgroundUpdatedAt)})` } : undefined} />
       <input ref={backgroundInputRef} type="file" accept="image/*" hidden onChange={(event) => void changeBackground(event.target.files?.[0])} />
+      <input ref={buttonImageInputRef} type="file" accept="image/*" hidden onChange={(event) => void changeButtonImage(event.target.files?.[0])} />
       <header className="topbar">
         <div className="topbar-version" ref={versionMenuRef}><button type="button" className="topbar-favicon" aria-label="View release time" aria-expanded={showBuildInfo} onClick={() => { setShowWorkoutMenu(false); setShowBuildInfo((open) => !open); }}><img src="/favicon.svg" alt="" /></button>{showBuildInfo && <div className="version-dropdown release-time-dropdown" role="status"><time dateTime={__APP_BUILD_TIME__}>{formatBuildTime(__APP_BUILD_TIME__)}</time></div>}</div>
         <h1 className="topbar-title">{tab === "rm" ? "RM Calculator" : tab === "lifts" ? "Best Lifts" : tab === "today" ? "Workout" : "Workouts"}</h1>
-        {tab === "history" && <div className="topbar-actions" ref={workoutMenuRef}><button type="button" className="topbar-more" aria-label="More workout options" aria-haspopup="menu" aria-expanded={showWorkoutMenu} onClick={() => { setShowBuildInfo(false); setShowWorkoutMenu((open) => !open); }}><MoreHorizontal aria-hidden="true" /></button>{showWorkoutMenu && <div className="workout-actions-menu" role="menu"><button type="button" role="menuitem" onClick={openExerciseLibrary}>Manage exercises</button><button type="button" role="menuitem" disabled={backgroundSaving} onClick={() => backgroundInputRef.current?.click()}>{backgroundSaving ? "Saving background…" : backgroundUpdatedAt ? "Change background" : "Set background photo"}</button>{backgroundUpdatedAt && <button type="button" role="menuitem" onClick={() => void removeBackground()}>Remove background</button>}</div>}</div>}
+        {tab === "history" && <div className="topbar-actions" ref={workoutMenuRef}><button type="button" className="topbar-more" aria-label="More workout options" aria-haspopup="menu" aria-expanded={showWorkoutMenu} onClick={() => { setShowBuildInfo(false); setShowWorkoutMenu((open) => !open); }}><MoreHorizontal aria-hidden="true" /></button>{showWorkoutMenu && <div className="workout-actions-menu" role="menu"><button type="button" role="menuitem" onClick={openExerciseLibrary}>Manage exercises</button><button type="button" role="menuitem" disabled={backgroundSaving} onClick={() => backgroundInputRef.current?.click()}>{backgroundSaving ? "Saving background…" : backgroundUpdatedAt ? "Change background" : "Set background photo"}</button>{backgroundUpdatedAt && <button type="button" role="menuitem" onClick={() => void removeBackground()}>Remove background</button>}<button type="button" role="menuitem" onClick={() => buttonImageInputRef.current?.click()}>{buttonImageUpdatedAt ? "Change button picture" : "Set button picture"}</button>{buttonImageUpdatedAt && <button type="button" role="menuitem" onClick={() => void removeButtonImage()}>Remove button picture</button>}</div>}</div>}
       </header>
 
       {tab === "today" && draft && <div className="draft-back-gesture" aria-hidden="true" onTouchStart={beginDraftBackTouch} onTouchMove={moveDraftBackTouch} onTouchEnd={finishDraftBackTouch} onTouchCancel={() => { draftTouchStart.current = null; }} />}
@@ -913,7 +953,7 @@ function RepnoteApp() {
         <button className={tab === "rm" ? "active" : ""} onClick={() => openMainTab("rm")}><Calculator aria-hidden="true" />RM</button>
       </nav>
 
-      {tab === "history" && !workoutDetailOpen && !exerciseLibraryOpen && <button type="button" className="new-workout-fab" aria-label={draft ? "Continue workout or log an activity" : "Log a workout"} aria-haspopup="dialog" onClick={() => setShowNewEntryMenu(true)}><span className="fab-heart"><Plus aria-hidden="true" /></span><span className="fab-label">{draft ? "Continue" : "New workout"}</span></button>}
+      {tab === "history" && !workoutDetailOpen && !exerciseLibraryOpen && <button type="button" className="new-workout-fab" aria-label={draft ? "Continue workout or log an activity" : "Log a workout"} aria-haspopup="dialog" onClick={() => setShowNewEntryMenu(true)}>{buttonImageUpdatedAt ? <span className="fab-picture"><img src={`/api/background?slot=button&v=${encodeURIComponent(buttonImageUpdatedAt)}`} alt="" /><i aria-hidden="true"><Plus /></i></span> : <span className="fab-heart"><Plus aria-hidden="true" /></span>}<span className="fab-label">{draft ? "Continue" : "New workout"}</span></button>}
 
       {showNewEntryMenu && <div className="new-entry-sheet-backdrop" onClick={() => setShowNewEntryMenu(false)}><section className="new-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="new-entry-title" onClick={(event) => event.stopPropagation()}><header><h2 id="new-entry-title">What did you do today? ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={() => setShowNewEntryMenu(false)}><X aria-hidden="true" /></button></header><div className="new-entry-options">{newEntryOptions.map((option) => <button type="button" key={option.activity} className={`new-entry-option activity-${option.activity}`} onClick={() => chooseNewEntry(option.activity)}><i className={`activity-heart activity-${option.activity}`} aria-hidden="true" /><span><b>{option.label}</b><small>{option.hint}</small></span></button>)}</div></section></div>}
 
