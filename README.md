@@ -20,7 +20,9 @@ It intentionally does **not** include Guest mode, Insights, public workout APIs,
 
 ## Included exercise library
 
-The seed migration contains all 49 exercise names from the source application's current exercise library. Training frequencies start at zero because personal workout history is not distributed. The five default frequent exercises are Bench Press, Deadlift, Pull-Up, Row, and Squat.
+The exercise library ships with seven exercises: Bulgarian Split Squat, Single Leg Deadlift, Bench Press, Bicep Curl, Farmer Squat, Barbell Squat, and Leg Extension (migration `0005` replaces the original 49-exercise seed). Training frequencies start at zero because personal workout history is not distributed. You can add your own exercise from the workout editor's **More exercises** picker or from **Manage exercises**; added exercises are stored in D1 and stay in the list permanently.
+
+Repnote uses no Durable Objects; its only stateful resource is D1.
 
 ## Start here
 

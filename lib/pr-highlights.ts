@@ -16,6 +16,7 @@ export const rebuildPrHighlightsStatements = (db: D1Database, computedAt: string
         CASE we.name
           WHEN 'Bench Press' THEN 'bench_press'
           WHEN 'Squat' THEN 'squat'
+          WHEN 'Barbell Squat' THEN 'squat'
           WHEN 'Deadlift' THEN 'deadlift'
         END AS lift_type,
         w.workout_date,
@@ -26,7 +27,7 @@ export const rebuildPrHighlightsStatements = (db: D1Database, computedAt: string
         w.unit,
         CASE WHEN w.unit = 'lbs' THEN ws.weight / 2.2046226218 ELSE ws.weight END AS weight_kg,
         ROW_NUMBER() OVER (
-          PARTITION BY w.id, we.name
+          PARTITION BY w.id, CASE WHEN we.name = 'Barbell Squat' THEN 'Squat' ELSE we.name END
           ORDER BY CASE WHEN w.unit = 'lbs' THEN ws.weight / 2.2046226218 ELSE ws.weight END DESC,
                    we.position ASC,
                    ws.position ASC,
@@ -37,7 +38,7 @@ export const rebuildPrHighlightsStatements = (db: D1Database, computedAt: string
       JOIN workout_sets ws ON ws.workout_exercise_id = we.id
       WHERE w.user_id = ?
         AND w.status = 'completed'
-        AND we.name IN ('Bench Press', 'Squat', 'Deadlift')
+        AND we.name IN ('Bench Press', 'Squat', 'Barbell Squat', 'Deadlift')
         AND ws.reps = 1
         AND ws.weight > 0
     ),
