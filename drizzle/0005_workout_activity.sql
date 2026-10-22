@@ -1,0 +1,1 @@
+ALTER TABLE `workouts` ADD `activity` text DEFAULT 'strength' NOT NULL;

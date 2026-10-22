@@ -18,8 +18,10 @@ type PrHighlight = {
   previousBestKg: number | null;
   improvementKg: number | null;
 };
+type Activity = "strength" | "cardio" | "climbing";
 type Workout = {
   id: string;
+  activity?: Activity;
   status?: "draft" | "completed";
   draftOfWorkoutId?: string | null;
   date: string;
@@ -34,6 +36,9 @@ type Workout = {
 
 const PR_LIFT_LABELS: Record<PrHighlight["lift"], string> = { bench_press: "BP", squat: "SQ", deadlift: "DL" };
 const PR_LIFT_NAMES: Record<PrHighlight["lift"], string> = { bench_press: "Bench Press", squat: "Squat", deadlift: "Deadlift" };
+const ACTIVITY_LABELS: Record<Activity, string> = { strength: "Lifting", cardio: "Cardio", climbing: "Climbing" };
+const ACTIVITY_ORDER: Activity[] = ["strength", "climbing", "cardio"];
+const activityOf = (workout: Workout): Activity => workout.activity ?? "strength";
 const formatPrWeight = (weight: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(weight);
 
 const HISTORY_KEY = "repnote-history-v1";
@@ -108,7 +113,7 @@ function SwipeableHistoryRow({ workout, onOpen, onDelete }: { workout: Workout; 
         }}
       >
         <time dateTime={workout.date}><strong>{dateFromWorkout(workout).getDate()}</strong><span>{new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(dateFromWorkout(workout)).toUpperCase()}</span></time>
-        <div className="history-exercise-summary">{workout.exercises.length ? workout.exercises.map((exercise) => <span className="history-exercise-name" key={exercise.id}>{exercise.name}<i aria-label={`${exercise.sets.length} sets`}>×{exercise.sets.length}</i></span>) : <span className="history-exercise-name">Free training</span>}</div>
+        <div className="history-exercise-summary">{activityOf(workout) !== "strength" ? <span className={`history-activity-name activity-${activityOf(workout)}`}><i aria-hidden="true" />{ACTIVITY_LABELS[activityOf(workout)]}{workout.note ? <small>{workout.note}</small> : null}</span> : workout.exercises.length ? workout.exercises.map((exercise) => <span className="history-exercise-name" key={exercise.id}>{exercise.name}<i aria-label={`${exercise.sets.length} sets`}>×{exercise.sets.length}</i></span>) : <span className="history-exercise-name">Free training</span>}</div>
         {workout.prHighlights?.length ? <span className="history-pr-highlight" aria-label={`New personal record: ${workout.prHighlights.map((highlight) => `${PR_LIFT_NAMES[highlight.lift]} ${formatPrWeight(highlight.weight)} ${highlight.unit}`).join(", ")}`}><b>PR</b><span>{workout.prHighlights.map((highlight) => `${PR_LIFT_LABELS[highlight.lift]} ${formatPrWeight(highlight.weight)} ${highlight.unit}`).join(" · ")}</span></span> : null}
       </button>
     </div>
@@ -197,7 +202,11 @@ function CalendarMonth({ year, month, workouts, collapsed, onToggle, onOpen }: {
           const day = index + 1;
           const dayWorkouts = workoutsByDay.get(day);
           const hasPr = dayWorkouts?.some((workout) => workout.prHighlights?.length);
-          return <span className="calendar-cell" key={day}>{dayWorkouts ? <button className={hasPr ? "pr-day" : undefined} aria-label={`Open workout from ${formatMonthName(month)} ${day}, ${year}${hasPr ? ", personal record" : ""}`} onClick={() => onOpen(dayWorkouts[0])}>{day}</button> : day}</span>;
+          const activities = ACTIVITY_ORDER.filter((activity) => dayWorkouts?.some((workout) => activityOf(workout) === activity));
+          const primary = dayWorkouts && ([...dayWorkouts].sort((a, b) => ACTIVITY_ORDER.indexOf(activityOf(a)) - ACTIVITY_ORDER.indexOf(activityOf(b)))[0]);
+          const className = [`activity-${activities.length > 1 ? "mixed" : activities[0] ?? "strength"}`, hasPr ? "pr-day" : ""].filter(Boolean).join(" ");
+          const style = activities.length > 1 ? { background: `conic-gradient(${activities.map((activity, i) => `var(--activity-${activity}) ${(i / activities.length) * 360}deg ${((i + 1) / activities.length) * 360}deg`).join(", ")})` } : undefined;
+          return <span className="calendar-cell" key={day}>{dayWorkouts && primary ? <button className={className} style={style} aria-label={`Open ${activities.map((activity) => ACTIVITY_LABELS[activity]).join(" and ")} from ${formatMonthName(month)} ${day}, ${year}${hasPr ? ", personal record" : ""}`} onClick={() => onOpen(primary)}>{day}</button> : day}</span>;
         })}
       </div></>}
     </section>
@@ -232,6 +241,8 @@ function RepnoteApp() {
   const [permissionError, setPermissionError] = useState("");
   const [showBuildInfo, setShowBuildInfo] = useState(false);
   const [showWorkoutMenu, setShowWorkoutMenu] = useState(false);
+  const [showNewEntryMenu, setShowNewEntryMenu] = useState(false);
+  const newEntryMenuRef = useRef<HTMLDivElement>(null);
   const versionMenuRef = useRef<HTMLDivElement>(null);
   const workoutMenuRef = useRef<HTMLDivElement>(null);
   const draftTouchStart = useRef<{ x: number; y: number } | null>(null);
@@ -279,6 +290,15 @@ function RepnoteApp() {
     document.addEventListener("pointerdown", closeVersionMenu);
     return () => document.removeEventListener("pointerdown", closeVersionMenu);
   }, [showBuildInfo]);
+
+  useEffect(() => {
+    if (!showNewEntryMenu) return;
+    const closeNewEntryMenu = (event: PointerEvent) => {
+      if (!newEntryMenuRef.current?.contains(event.target as Node)) setShowNewEntryMenu(false);
+    };
+    document.addEventListener("pointerdown", closeNewEntryMenu);
+    return () => document.removeEventListener("pointerdown", closeNewEntryMenu);
+  }, [showNewEntryMenu]);
 
   useEffect(() => {
     if (!showWorkoutMenu) return;
@@ -515,8 +535,9 @@ function RepnoteApp() {
   }, [history]);
 
   const trainingStats = useMemo(() => {
-    const workoutDays = new Set(history.filter((workout) => workout.exercises.length > 0).map((workout) => workout.date)).size;
-    const firstWorkoutDate = history.filter((workout) => workout.exercises.length > 0).reduce<string | null>((first, workout) => !first || workout.date < first ? workout.date : first, null);
+    const counted = history.filter((workout) => activityOf(workout) !== "strength" || workout.exercises.length > 0);
+    const workoutDays = new Set(counted.map((workout) => workout.date)).size;
+    const firstWorkoutDate = counted.reduce<string | null>((first, workout) => !first || workout.date < first ? workout.date : first, null);
     return { workoutDays, firstWorkoutDate };
   }, [history]);
 
@@ -561,6 +582,21 @@ function RepnoteApp() {
     setDraftSyncStatus("idle");
     setDraft({ id: makeId(), status: "draft", draftOfWorkoutId: null, date: localDateKey(), startedAt: new Date().toISOString(), finishedAt: null, unit: "lbs", note: "", exercises: [] });
     openDraftView();
+  };
+  const logActivity = async (activity: Exclude<Activity, "strength">) => {
+    setShowNewEntryMenu(false);
+    const now = new Date().toISOString();
+    const entry: Workout = { id: makeId(), status: "completed", activity, date: localDateKey(), startedAt: now, finishedAt: now, unit: "lbs", note: "", exercises: [] };
+    setHistory((items) => [entry, ...items]);
+    try {
+      const response = await fetch(`${apiBase}/workouts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+      if (!response.ok) throw new Error("Save failed");
+      const result = await response.json() as { workout?: Workout | null };
+      if (result.workout) setHistory((items) => items.map((item) => item.id === entry.id ? result.workout as Workout : item));
+    } catch {
+      setHistory((items) => items.filter((item) => item.id !== entry.id));
+      setPermissionError(`${ACTIVITY_LABELS[activity]} could not be logged. Check your connection and try again.`);
+    }
   };
   const returnToHistory = () => {
     setShowDiscardConfirm(false);
@@ -735,7 +771,7 @@ function RepnoteApp() {
       <section className="training-duration-card" aria-label="Workout overview and controls">
         <div className="training-card-top">
           <div className="training-card-summary"><strong>{trainingStats.workoutDays}</strong><div><span>Total workouts</span><small>{trainingStats.firstWorkoutDate ? `Since ${formatRecordDate(trainingStats.firstWorkoutDate)}` : "Start your first workout"}</small></div></div>
-          <button className="history-new-workout" aria-label={draft ? editingWorkoutId ? "Continue editing workout" : "Continue workout" : "Create workout"} title={draft ? "Continue workout" : "Create workout"} onClick={draft ? openDraftView : startWorkout}>{draft ? <FileInput aria-hidden="true" /> : <Plus aria-hidden="true" />}</button>
+          <div className="new-entry-actions" ref={newEntryMenuRef}><button className="history-new-workout" aria-label={draft ? "Continue workout or log activity" : "Log workout"} title={draft ? "Continue workout" : "Log workout"} aria-haspopup="menu" aria-expanded={showNewEntryMenu} onClick={() => setShowNewEntryMenu((open) => !open)}>{draft ? <FileInput aria-hidden="true" /> : <Plus aria-hidden="true" />}</button>{showNewEntryMenu && <div className="workout-actions-menu new-entry-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setShowNewEntryMenu(false); if (draft) openDraftView(); else startWorkout(); }}><i className="activity-dot activity-strength" aria-hidden="true" />{draft ? editingWorkoutId ? "Continue editing" : "Continue lifting" : "Lifting"}</button><button type="button" role="menuitem" onClick={() => void logActivity("climbing")}><i className="activity-dot activity-climbing" aria-hidden="true" />Climbing today</button><button type="button" role="menuitem" onClick={() => void logActivity("cardio")}><i className="activity-dot activity-cardio" aria-hidden="true" />Cardio today</button></div>}</div>
         </div>
         <div className="training-card-filter"><span>Filter</span><CustomSelect className="exercise-filter" ariaLabel="Filter workouts by exercise" value={exerciseFilter} onChange={setExerciseFilter} options={[{ value: "", label: "All exercises" }, ...exerciseFilterOptions.map((name) => ({ value: name, label: name }))]} /><div className="history-controls"><button type="button" className="collapse-all" aria-label={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} title={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} aria-pressed={allMonthsCollapsed} onClick={toggleAllMonths}>{allMonthsCollapsed ? <ChevronsDown aria-hidden="true" /> : <ChevronsUp aria-hidden="true" />}</button><div className="history-view-switch" aria-label="View mode"><button className={historyView === "list" ? "active" : ""} aria-label="List view" title="List view" aria-pressed={historyView === "list"} onClick={() => setHistoryView("list")}><List aria-hidden="true" /></button><button className={historyView === "calendar" ? "active" : ""} aria-label="Calendar view" title="Calendar view" aria-pressed={historyView === "calendar"} onClick={() => setHistoryView("calendar")}><CalendarDays aria-hidden="true" /></button></div></div></div>
       </section>
@@ -744,9 +780,9 @@ function RepnoteApp() {
         <section className="year-group compact-list-year" key={year}>{Object.entries(months).map(([month, items]) => (
           <div className={`month-group${collapsedMonths.has(`${year}/${month}`) ? " collapsed" : ""}`} key={month}><h4><button type="button" className="month-toggle" aria-expanded={!collapsedMonths.has(`${year}/${month}`)} onClick={() => toggleMonth(`${year}/${month}`)}><span>{formatMonthName(month)} {Number.parseInt(year, 10)}</span><ChevronDown aria-hidden="true" /></button><small>{items.length}</small></h4>{!collapsedMonths.has(`${year}/${month}`) && items.map((item) => <SwipeableHistoryRow key={item.id} workout={item} onOpen={() => openWorkoutDetail(item)} onDelete={() => void deleteWorkout(item)} />)}</div>
         ))}</section>
-      )) : Object.entries(grouped).map(([year, months]) => (
+      )) : [<div className="activity-legend" key="legend" aria-label="Calendar colors">{ACTIVITY_ORDER.map((activity) => <span key={activity}><i className={`activity-dot activity-${activity}`} aria-hidden="true" />{ACTIVITY_LABELS[activity]}</span>)}</div>, ...Object.entries(grouped).map(([year, months]) => (
         <section className="calendar-year compact-calendar-year" key={year}>{Object.entries(months).map(([month, items]) => <CalendarMonth key={month} year={Number.parseInt(year, 10)} month={Number.parseInt(month, 10)} workouts={items} collapsed={collapsedMonths.has(`${year}/${month}`)} onToggle={() => toggleMonth(`${year}/${month}`)} onOpen={openWorkoutDetail} />)}</section>
-      ))}
+      ))]}
     </div>
   );
 
@@ -817,7 +853,7 @@ function RepnoteApp() {
 
       {exerciseLibraryOpen && <article className="exercise-library-page workout-detail-page"><div className="page-back-gesture" aria-hidden="true" onTouchStart={beginLibraryBackTouch} onTouchMove={moveLibraryBackTouch} onTouchEnd={finishLibraryBackTouch} onTouchCancel={() => { libraryTouchStart.current = null; }} /><div className="detail-page-inner exercise-library-content"><button className="session-back" onClick={closeExerciseLibrary}><span aria-hidden="true">←</span> Back to workouts</button><div className="exercise-library-heading"><div><p className="eyebrow">EXERCISES</p><h2>Exercise library</h2></div><span>{exerciseOptions.length}</span></div>{permissionError && <div className="permission-error" role="alert"><span>{permissionError}</span><button aria-label="Dismiss message" onClick={() => setPermissionError("")}>×</button></div>}<section className="exercise-library-panel"><div className="library-add"><div><input id="exercise-name" aria-label="Exercise name" value={newExercise} onChange={(e) => setNewExercise(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveCustomExercise()} placeholder="Add an exercise" /><button onClick={saveCustomExercise} disabled={!newExercise.trim()}>Add</button></div></div><div className="exercise-library"><div className="library-section"><h4><span>EXERCISE</span><span>TIMES</span><span>FREQUENT</span></h4>{exerciseLibrary.map((item) => <div className="library-row" key={item.id}><strong>{item.name}</strong><span className="exercise-frequency"><b>{item.frequency}</b></span><label className="frequent-check"><input type="checkbox" checked={item.isFrequent} onChange={() => toggleFrequentExercise(item)} aria-label={`Mark ${item.name} as frequent`} /></label></div>)}</div></div></section></div></article>}
 
-      {workoutDetailOpen && selected && <article className="workout-detail-page"><div className="detail-page-inner"><button className="session-back" onClick={closeWorkoutDetail}><span aria-hidden="true">←</span> Back to workouts</button><div className="detail-heading"><h2>{formatDate(`${selected.date}T12:00:00`)}</h2><button className="edit-workout" aria-label="Edit workout" title="Edit workout" onClick={() => editWorkout(selected)}><Pencil aria-hidden="true" /></button></div>{selected.startedAt && selected.finishedAt && <div className="time-strip"><div><span>START</span><strong>{formatClock(selected.startedAt)}</strong></div><i>→</i><div><span>FINISH</span><strong>{formatClock(selected.finishedAt)}</strong></div><div><span>DURATION</span><strong>{duration(selected.startedAt, selected.finishedAt)}</strong></div></div>}{selected.note && <div className="detail-note"><span>GENERAL NOTE</span><p>{selected.note}</p></div>}<div className="detail-exercises">{selected.exercises.map((exercise) => <section key={exercise.id}><h3>{exercise.name}<span>{exercise.sets.length} sets</span></h3>{exercise.sets.map((set, index) => <div key={set.id}><b>{index + 1}</b><strong>{set.weight || "—"} <small>{selected.unit ?? "kg"}</small></strong><strong>{set.reps || "—"} <small>reps</small></strong><p>{set.note || ""}</p></div>)}</section>)}</div></div></article>}
+      {workoutDetailOpen && selected && <article className="workout-detail-page"><div className="detail-page-inner"><button className="session-back" onClick={closeWorkoutDetail}><span aria-hidden="true">←</span> Back to workouts</button><div className="detail-heading"><h2>{formatDate(`${selected.date}T12:00:00`)}</h2>{activityOf(selected) === "strength" && <button className="edit-workout" aria-label="Edit workout" title="Edit workout" onClick={() => editWorkout(selected)}><Pencil aria-hidden="true" /></button>}</div>{activityOf(selected) !== "strength" && <div className={`detail-activity activity-${activityOf(selected)}`}><i className={`activity-dot activity-${activityOf(selected)}`} aria-hidden="true" />{ACTIVITY_LABELS[activityOf(selected)]}</div>}{activityOf(selected) === "strength" && selected.startedAt && selected.finishedAt && <div className="time-strip"><div><span>START</span><strong>{formatClock(selected.startedAt)}</strong></div><i>→</i><div><span>FINISH</span><strong>{formatClock(selected.finishedAt)}</strong></div><div><span>DURATION</span><strong>{duration(selected.startedAt, selected.finishedAt)}</strong></div></div>}{selected.note && <div className="detail-note"><span>GENERAL NOTE</span><p>{selected.note}</p></div>}<div className="detail-exercises">{selected.exercises.map((exercise) => <section key={exercise.id}><h3>{exercise.name}<span>{exercise.sets.length} sets</span></h3>{exercise.sets.map((set, index) => <div key={set.id}><b>{index + 1}</b><strong>{set.weight || "—"} <small>{selected.unit ?? "kg"}</small></strong><strong>{set.reps || "—"} <small>reps</small></strong><p>{set.note || ""}</p></div>)}</section>)}</div></div></article>}
     </main>
   );
 }

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { --ink:#1c241c; --paper:#f2f0e9; --card:#fbfaf6; --lime:#d7ff3f; --line:#d8d7cf; --muted:#73786f; }
+:root { --activity-strength:#2878d4; --activity-climbing:#e0569b; --activity-cardio:#2e9d6a; --ink:#1c241c; --paper:#f2f0e9; --card:#fbfaf6; --lime:#d7ff3f; --line:#d8d7cf; --muted:#73786f; }
 * { box-sizing:border-box; }
 html { background:#d9d8d2; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; font-variant-numeric:lining-nums tabular-nums; }
@@ -270,3 +270,19 @@ button { cursor:pointer; }
   font-variant-numeric:lining-nums tabular-nums;
   letter-spacing:0;
 }
+
+/* Activity types: lifting (blue), climbing (pink), cardio (green) */
+.calendar-cell button.activity-climbing { background:var(--activity-climbing); }.calendar-cell button.activity-climbing:hover { background:#c93f85; }
+.calendar-cell button.activity-cardio { background:var(--activity-cardio); }.calendar-cell button.activity-cardio:hover { background:#24855a; }
+.calendar-cell button.activity-mixed { text-shadow:0 1px 2px #0005; }
+.activity-dot { flex:none; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--activity-strength); }
+.activity-dot.activity-climbing { background:var(--activity-climbing); }.activity-dot.activity-cardio { background:var(--activity-cardio); }
+.activity-legend { display:flex; flex-wrap:wrap; gap:14px; margin:0 0 12px; padding:0 2px; color:#6f756c; font:700 10px Inter,ui-sans-serif,sans-serif; letter-spacing:.04em; }
+.activity-legend span { display:inline-flex; align-items:center; gap:6px; }
+.new-entry-actions { position:relative; flex:0 0 auto; }
+.new-entry-menu { min-width:172px; }.new-entry-menu button { gap:9px; }
+.history-activity-name { min-height:18px; display:inline-flex; align-items:center; gap:6px; min-width:0; color:var(--ink); font:700 11px Inter,ui-sans-serif,sans-serif; white-space:nowrap; }
+.history-activity-name>i { width:7px; height:7px; border-radius:50%; flex:none; background:var(--activity-strength); }
+.history-activity-name.activity-climbing>i { background:var(--activity-climbing); }.history-activity-name.activity-cardio>i { background:var(--activity-cardio); }
+.history-activity-name small { overflow:hidden; text-overflow:ellipsis; color:#7a8077; font-weight:600; font-size:10px; }
+.detail-activity { display:inline-flex; align-items:center; gap:8px; margin:4px 0 14px; color:var(--ink); font:750 13px Inter,ui-sans-serif,sans-serif; letter-spacing:.02em; }
