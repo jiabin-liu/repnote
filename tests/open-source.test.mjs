@@ -5,7 +5,7 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
-test("ships only Workouts and RM primary tabs", async () => {
+test("ships Workouts, Best lifts, and Trends primary tabs", async () => {
   const [page, calculator] = await Promise.all([
     read("app/page.tsx"),
     read("app/rm/RmCalculator.tsx"),
@@ -13,8 +13,10 @@ test("ships only Workouts and RM primary tabs", async () => {
 
   assert.match(page, /<RepnoteApp \/>/);
   assert.match(page, />Workouts\{draft && <i \/>\}<\/button>/);
-  assert.match(page, /<Calculator aria-hidden="true" \/>RM<\/button>/);
-  assert.match(page, /<RmCalculator embedded \/>/);
+  assert.match(page, /<Trophy aria-hidden="true" \/>Best lifts<\/button>/);
+  assert.match(page, /<ChartLine aria-hidden="true" \/>Trends<\/button>/);
+  assert.match(page, /<TrendsScreen /);
+  assert.match(calculator, /export default function RmCalculator/);
   assert.doesNotMatch(page, /Insights|BigThreeInsights|TrendingUp/);
   assert.doesNotMatch(page + calculator, /Guest|guest|isGuest/);
 });

@@ -2,8 +2,8 @@
 /* eslint-disable react-hooks/refs, @next/next/no-img-element -- Native History uses refs; the tiny local SVG favicon needs no image optimizer. */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from "react";
-import { Calculator, ChevronDown, ChevronsDown, ChevronsUp, MoreHorizontal, Pencil, Plus, Search, Trash2, Trophy, X } from "lucide-react";
-import RmCalculator from "./rm/RmCalculator";
+import { ChartLine, ChevronDown, ChevronsDown, ChevronsUp, MoreHorizontal, Pencil, Plus, Search, Trash2, Trophy, X } from "lucide-react";
+import TrendsScreen from "./TrendsScreen";
 import CustomSelect from "./CustomSelect";
 
 type SetRow = { id: string; weight: string; reps: string; note: string };
@@ -239,7 +239,7 @@ export default function Home() {
 }
 
 function RepnoteApp() {
-  const [tab, setTab] = useState<"today" | "history" | "lifts" | "rm">("history");
+  const [tab, setTab] = useState<"today" | "history" | "lifts" | "trends">("history");
   const [draft, setDraft] = useState<Workout | null>(null);
   const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
   const [history, setHistory] = useState<Workout[]>([]);
@@ -297,7 +297,7 @@ function RepnoteApp() {
     return draftSaveChainRef.current;
   };
 
-  const openMainTab = (nextTab: "history" | "lifts" | "rm") => {
+  const openMainTab = (nextTab: "history" | "lifts" | "trends") => {
     setShowWorkoutMenu(false);
     const returnToDraft = nextTab === "history" && Boolean(draft);
     document.documentElement.classList.toggle("draft-open", returnToDraft);
@@ -948,7 +948,7 @@ function RepnoteApp() {
       <input ref={buttonImageInputRef} type="file" accept="image/*" hidden onChange={(event) => void changeButtonImage(event.target.files?.[0])} />
       <header className="topbar">
         <div className="topbar-version" ref={versionMenuRef}><button type="button" className="topbar-favicon" aria-label="View release time" aria-expanded={showBuildInfo} onClick={() => { setShowWorkoutMenu(false); setShowBuildInfo((open) => !open); }}><img src="/favicon.svg" alt="" /></button>{showBuildInfo && <div className="version-dropdown release-time-dropdown" role="status"><time dateTime={__APP_BUILD_TIME__}>{formatBuildTime(__APP_BUILD_TIME__)}</time></div>}</div>
-        <h1 className="topbar-title">{tab === "rm" ? "RM Calculator" : tab === "lifts" ? "Best Lifts" : tab === "today" ? "Workout" : "Workouts"}</h1>
+        <h1 className="topbar-title">{tab === "trends" ? "Trends" : tab === "lifts" ? "Best Lifts" : tab === "today" ? "Workout" : "Workouts"}</h1>
         {tab === "history" && <div className="topbar-actions" ref={workoutMenuRef}><button type="button" className="topbar-more" aria-label="More workout options" aria-haspopup="menu" aria-expanded={showWorkoutMenu} onClick={() => { setShowBuildInfo(false); setShowWorkoutMenu((open) => !open); }}><MoreHorizontal aria-hidden="true" /></button>{showWorkoutMenu && <div className="workout-actions-menu" role="menu"><button type="button" role="menuitem" onClick={openExerciseLibrary}>Manage exercises</button><button type="button" role="menuitem" disabled={backgroundSaving} onClick={() => backgroundInputRef.current?.click()}>{backgroundSaving ? "Saving background…" : backgroundUpdatedAt ? "Change background" : "Set background photo"}</button>{backgroundUpdatedAt && <button type="button" role="menuitem" onClick={() => void removeBackground()}>Remove background</button>}<button type="button" role="menuitem" onClick={() => buttonImageInputRef.current?.click()}>{buttonImageUpdatedAt ? "Change button picture" : "Set button picture"}</button>{buttonImageUpdatedAt && <button type="button" role="menuitem" onClick={() => void removeButtonImage()}>Remove button picture</button>}</div>}</div>}
       </header>
 
@@ -1001,13 +1001,13 @@ function RepnoteApp() {
               </div>
             </div>
           )
-        ) : tab === "rm" ? <RmCalculator embedded /> : tab === "lifts" ? liftsScreen : null}
+        ) : tab === "trends" ? <TrendsScreen history={history} unit={highlightUnit} onUnitChange={setHighlightUnit} /> : tab === "lifts" ? liftsScreen : null}
       </section>
 
       <nav className="tabbar" aria-label="Main navigation">
         <button className={tab === "history" || tab === "today" ? "active" : ""} onClick={() => openMainTab("history")}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11a3 3 0 0 1 3 3v12H8a3 3 0 0 1-3-3zM8 4.5v15M11 9h5M11 13h5" /></svg>Workouts{draft && <i />}</button>
         <button className={tab === "lifts" ? "active" : ""} onClick={() => openMainTab("lifts")}><Trophy aria-hidden="true" />Best lifts</button>
-        <button className={tab === "rm" ? "active" : ""} onClick={() => openMainTab("rm")}><Calculator aria-hidden="true" />RM</button>
+        <button className={tab === "trends" ? "active" : ""} onClick={() => openMainTab("trends")}><ChartLine aria-hidden="true" />Trends</button>
       </nav>
 
       {tab === "history" && !workoutDetailOpen && !exerciseLibraryOpen && <button type="button" className="new-workout-fab" aria-label={draft ? "Continue workout or log an activity" : "Log a workout"} aria-haspopup="dialog" onClick={() => setShowNewEntryMenu(true)}>{buttonImageUpdatedAt ? <span className="fab-picture"><img src={`/api/background?slot=button&v=${encodeURIComponent(buttonImageUpdatedAt)}`} alt="" /><i aria-hidden="true"><Plus /></i></span> : <span className="fab-heart"><Plus aria-hidden="true" /></span>}<span className="fab-label">{draft ? "Continue" : "New workout"}</span></button>}

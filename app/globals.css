@@ -536,3 +536,30 @@ html.detail-open .app-scroll,html.library-open .app-scroll,html.detail-open .top
 .has-photo-background .detail-note { background:rgba(255,240,246,.45) !important; }
 .has-photo-background .workout-detail-page .session-back,.has-photo-background .workout-detail-page .detail-heading h2 { text-shadow:0 0 8px rgba(255,255,255,.95),0 0 2px #fff; }
 .has-photo-background .workout-detail-page .session-back { display:inline-flex; padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.55); }
+
+/* Trends tab */
+.trends-screen { max-width:640px; margin:auto; display:flex; flex-direction:column; gap:16px; }
+.trends-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px; }
+.trends-heading p { margin:0; color:var(--muted); font-size:12px; font-weight:600; text-shadow:0 0 6px rgba(255,255,255,.9); }
+.trend-card { padding:16px 14px 10px; background:var(--card); border:1px solid rgba(255,255,255,.9); border-radius:22px; box-shadow:var(--glow); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+.has-photo-background .trend-card { background:rgba(255,255,255,.55); backdrop-filter:blur(6px) saturate(1.1); -webkit-backdrop-filter:blur(6px) saturate(1.1); }
+.trend-card header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:0 4px 6px; }
+.trend-card h3 { margin:2px 0 0; color:var(--ink); font:500 18px/1.2 var(--font-serif); }
+.trend-stats { display:flex; gap:16px; flex:none; text-align:right; }
+.trend-stats span { display:block; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.trend-stats strong { display:block; color:var(--ink); font:500 24px/1.1 var(--font-serif); font-variant-numeric:tabular-nums; }
+.trend-stats strong small { margin-left:3px; color:var(--muted); font:600 10px var(--font-sans); text-transform:uppercase; }
+.trend-stats time { display:block; color:var(--muted); font-size:10px; }
+.trend-chart { width:100%; height:auto; display:block; overflow:visible; touch-action:pan-y; cursor:crosshair; }
+.trend-grid { stroke:rgba(150,110,150,.16); stroke-width:1; }
+.trend-y { fill:var(--ink); font:700 14px var(--font-sans); font-variant-numeric:tabular-nums; }
+.trend-x { fill:var(--muted); font:600 10px var(--font-sans); }
+.trend-line { fill:none; stroke:#b49ae8; stroke-width:2.4; stroke-linejoin:round; stroke-linecap:round; }
+.trend-dot { fill:#fff; stroke:#b49ae8; stroke-width:2; }
+.trend-dot.latest { fill:#f08cb3; stroke:#fff; stroke-width:2; }
+.trend-tip line { stroke:#e889ad; stroke-width:1.2; stroke-dasharray:3 3; }
+.trend-tip circle { fill:#f08cb3; stroke:#fff; stroke-width:2.5; }
+.trend-tip rect { fill:rgba(255,255,255,.96); stroke:#f3d1e1; }
+.trend-tip text { fill:var(--ink); font:700 11px var(--font-sans); }
+.trend-card.empty header { margin-bottom:0; }
+.trend-empty { margin:6px 4px 8px; color:var(--muted); font-size:12px; }
