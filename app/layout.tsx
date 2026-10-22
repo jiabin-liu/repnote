@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import "@fontsource-variable/dm-sans/opsz.css";
+import "@fontsource-variable/fraunces/opsz.css";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
