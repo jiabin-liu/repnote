@@ -1,4 +1,4 @@
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const workouts = sqliteTable("workouts", {
   id: text("id").primaryKey(),
@@ -62,3 +62,11 @@ export const workoutPrHighlights = sqliteTable("workout_pr_highlights", {
   index("idx_workout_pr_highlights_user_date").on(table.userId, table.workoutDate),
   index("idx_workout_pr_highlights_workout").on(table.workoutId),
 ]);
+
+// Small per-owner key/value store for UI preferences (e.g. the custom background image as a data URL).
+export const appSettings = sqliteTable("app_settings", {
+  userId: text("user_id").notNull().default("owner"),
+  key: text("key").notNull(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [uniqueIndex("idx_app_settings_user_key").on(table.userId, table.key)]);

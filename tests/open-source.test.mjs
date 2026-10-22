@@ -25,16 +25,17 @@ test("contains no Guest, CLI, docs, or v1 route trees", async () => {
   await assert.rejects(access(new URL("app/docs", root)));
   await assert.rejects(access(new URL("lib/cli-auth.ts", root)));
   const appRoutes = await readdir(new URL("app/api", root));
-  assert.deepEqual(appRoutes.sort(), ["draft", "exercises", "workouts"]);
+  assert.deepEqual(appRoutes.sort(), ["background", "draft", "exercises", "workouts"]);
 });
 
 test("uses configurable Cloudflare Access owner authentication", async () => {
-  const [auth, wrangler, workouts, exercises, draft] = await Promise.all([
+  const [auth, wrangler, workouts, exercises, draft, background] = await Promise.all([
     read("lib/owner-auth.ts"),
     read("wrangler.jsonc"),
     read("app/api/workouts/route.ts"),
     read("app/api/exercises/route.ts"),
     read("app/api/draft/route.ts"),
+    read("app/api/background/route.ts"),
   ]);
 
   assert.match(auth, /cf-access-authenticated-user-email/);
@@ -43,7 +44,7 @@ test("uses configurable Cloudflare Access owner authentication", async () => {
   assert.match(auth, /isLocalhost && DEV_AUTH_BYPASS === "true"/);
   assert.match(wrangler, /"DEV_AUTH_BYPASS": "false"/);
   assert.match(wrangler, /"binding": "DB"/);
-  for (const route of [workouts, exercises, draft]) {
+  for (const route of [workouts, exercises, draft, background]) {
     assert.match(route, /isOwnerRequest\(request\)/);
     assert.match(route, /ownerRequired\(\)/);
   }

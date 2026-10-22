@@ -44,6 +44,20 @@ const activitySplit = (activities: Activity[]) => activities.length > 1 ? { back
 const formatPrWeight = (weight: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(weight);
 
 const HISTORY_KEY = "repnote-history-v1";
+const BACKGROUND_KEY = "repnote-background-updated-v1";
+// Shrink a picked photo to a JPEG data URL small enough for one D1 value.
+const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82) => {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  let dataUrl = canvas.toDataURL("image/jpeg", quality);
+  for (let q = quality - 0.12; dataUrl.length > 1_700_000 && q > 0.4; q -= 0.12) dataUrl = canvas.toDataURL("image/jpeg", q);
+  return dataUrl;
+};
 const CUSTOM_EXERCISES_KEY = "repnote-custom-exercises-v1";
 const REPNOTE_VIEW_STATE = "repnoteView";
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -192,6 +206,9 @@ function RepnoteApp() {
   const [showBuildInfo, setShowBuildInfo] = useState(false);
   const [showWorkoutMenu, setShowWorkoutMenu] = useState(false);
   const [showNewEntryMenu, setShowNewEntryMenu] = useState(false);
+  const [backgroundUpdatedAt, setBackgroundUpdatedAt] = useState<string | null>(null);
+  const [backgroundSaving, setBackgroundSaving] = useState(false);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
   const newEntryMenuRef = useRef<HTMLDivElement>(null);
   const versionMenuRef = useRef<HTMLDivElement>(null);
   const workoutMenuRef = useRef<HTMLDivElement>(null);
@@ -336,6 +353,11 @@ function RepnoteApp() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate the visible cache before the remote D1 response arrives.
       setHistory(localHistory);
       setExerciseLibrary(localExercises);
+      setBackgroundUpdatedAt(localStorage.getItem(BACKGROUND_KEY));
+      fetch("/api/background?meta=1").then((response) => response.ok ? response.json() : Promise.reject()).then((data: { updatedAt: string | null }) => {
+        setBackgroundUpdatedAt(data.updatedAt);
+        if (data.updatedAt) localStorage.setItem(BACKGROUND_KEY, data.updatedAt); else localStorage.removeItem(BACKGROUND_KEY);
+      }).catch(() => undefined);
       Promise.all([
         fetch(`${apiBase}/workouts`).then((response) => response.ok ? response.json() : Promise.reject()),
         fetch(`${apiBase}/exercises`).then((response) => response.ok ? response.json() : Promise.reject()),
@@ -579,6 +601,37 @@ function RepnoteApp() {
       setPermissionError(`${ACTIVITY_LABELS[activity]} could not be logged. Check your connection and try again.`);
     }
   };
+  const changeBackground = async (file: File | undefined) => {
+    if (!file) return;
+    setShowWorkoutMenu(false);
+    setBackgroundSaving(true);
+    try {
+      const dataUrl = await imageFileToDataUrl(file);
+      const response = await fetch("/api/background", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataUrl }) });
+      if (!response.ok) throw new Error("Save failed");
+      const { updatedAt } = await response.json() as { updatedAt: string };
+      setBackgroundUpdatedAt(updatedAt);
+      try { localStorage.setItem(BACKGROUND_KEY, updatedAt); } catch { /* storage is a convenience only */ }
+    } catch {
+      setPermissionError("Background could not be saved. Try a smaller photo or check your connection.");
+    } finally {
+      setBackgroundSaving(false);
+      if (backgroundInputRef.current) backgroundInputRef.current.value = "";
+    }
+  };
+  const removeBackground = async () => {
+    setShowWorkoutMenu(false);
+    const previous = backgroundUpdatedAt;
+    setBackgroundUpdatedAt(null);
+    try {
+      const response = await fetch("/api/background", { method: "DELETE" });
+      if (!response.ok) throw new Error("Remove failed");
+      try { localStorage.removeItem(BACKGROUND_KEY); } catch { /* ignore */ }
+    } catch {
+      setBackgroundUpdatedAt(previous);
+      setPermissionError("Background could not be removed. Check your connection and try again.");
+    }
+  };
   const returnToHistory = () => {
     setShowDiscardConfirm(false);
     const url = new URL(window.location.href);
@@ -774,11 +827,13 @@ function RepnoteApp() {
   );
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${backgroundUpdatedAt ? " has-photo-background" : ""}`}>
+      <div className="app-backdrop" aria-hidden="true" style={backgroundUpdatedAt ? { backgroundImage: `url(/api/background?v=${encodeURIComponent(backgroundUpdatedAt)})` } : undefined} />
+      <input ref={backgroundInputRef} type="file" accept="image/*" hidden onChange={(event) => void changeBackground(event.target.files?.[0])} />
       <header className="topbar">
         <div className="topbar-version" ref={versionMenuRef}><button type="button" className="topbar-favicon" aria-label="View release time" aria-expanded={showBuildInfo} onClick={() => { setShowWorkoutMenu(false); setShowBuildInfo((open) => !open); }}><img src="/favicon.svg" alt="" /></button>{showBuildInfo && <div className="version-dropdown release-time-dropdown" role="status"><time dateTime={__APP_BUILD_TIME__}>{formatBuildTime(__APP_BUILD_TIME__)}</time></div>}</div>
         <h1 className="topbar-title">{tab === "rm" ? "RM Calculator" : tab === "today" ? "Workout" : "Workouts"}</h1>
-        {tab === "history" && <div className="topbar-actions" ref={workoutMenuRef}><button type="button" className="topbar-more" aria-label="More workout options" aria-haspopup="menu" aria-expanded={showWorkoutMenu} onClick={() => { setShowBuildInfo(false); setShowWorkoutMenu((open) => !open); }}><MoreHorizontal aria-hidden="true" /></button>{showWorkoutMenu && <div className="workout-actions-menu" role="menu"><button type="button" role="menuitem" onClick={openExerciseLibrary}>Manage exercises</button></div>}</div>}
+        {tab === "history" && <div className="topbar-actions" ref={workoutMenuRef}><button type="button" className="topbar-more" aria-label="More workout options" aria-haspopup="menu" aria-expanded={showWorkoutMenu} onClick={() => { setShowBuildInfo(false); setShowWorkoutMenu((open) => !open); }}><MoreHorizontal aria-hidden="true" /></button>{showWorkoutMenu && <div className="workout-actions-menu" role="menu"><button type="button" role="menuitem" onClick={openExerciseLibrary}>Manage exercises</button><button type="button" role="menuitem" disabled={backgroundSaving} onClick={() => backgroundInputRef.current?.click()}>{backgroundSaving ? "Saving background…" : backgroundUpdatedAt ? "Change background" : "Set background photo"}</button>{backgroundUpdatedAt && <button type="button" role="menuitem" onClick={() => void removeBackground()}>Remove background</button>}</div>}</div>}
       </header>
 
       {tab === "today" && draft && <div className="draft-back-gesture" aria-hidden="true" onTouchStart={beginDraftBackTouch} onTouchMove={moveDraftBackTouch} onTouchEnd={finishDraftBackTouch} onTouchCancel={() => { draftTouchStart.current = null; }} />}

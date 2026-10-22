@@ -1,6 +1,6 @@
 # Repnote
 
-Repnote is a private, self-hosted workout journal for Cloudflare. It records lifting workouts plus one-tap cardio, climbing, and ski days (color-coded on the activity grid and calendar), general notes, exercises, sets, weight, reps, set notes, units, timestamps, drafts, exercise frequency, and true one-rep-max PRs for Bench Press, Squat, and Deadlift.
+Repnote is a private, self-hosted workout journal for Cloudflare. It records lifting workouts plus one-tap cardio, climbing, and ski days (color-coded on the activity grid and calendar), and an optional private background photo, general notes, exercises, sets, weight, reps, set notes, units, timestamps, drafts, exercise frequency, and true one-rep-max PRs for Bench Press, Squat, and Deadlift.
 
 This open-source edition intentionally contains only two primary tabs:
 
