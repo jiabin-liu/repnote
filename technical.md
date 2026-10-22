@@ -6,7 +6,7 @@ This document describes the implementation of Repnote for developers who need to
 
 Repnote is a single-owner, self-hosted workout journal. The open-source edition contains two primary application areas:
 
-- **Workouts**: workout history, calendar/list browsing, filtering, exercise management, workout creation, D1-backed draft autosave, editing, deletion, exercise frequency, and true one-rep-max PR highlights.
+- **Workouts**: workout history as a Sunday-first calendar with a per-day detail page, filtering, exercise management, workout creation, D1-backed draft autosave, editing, deletion, exercise frequency, and true one-rep-max PR highlights.
 - **RM Calculator**: a client-side 1–15 RM reference calculator using NSCA percentages, Brzycki, and Epley.
 
 The application is deployed as one Cloudflare Worker with static assets and one D1 database. Cloudflare Access protects the entire application hostname and delegates sign-in to Google.
@@ -214,7 +214,7 @@ One row represents either a draft or a completed workout.
 - `status` is `draft` or `completed`.
 - `draft_of_workout_id` points to the completed record being edited; it is not a foreign key and is cleared on completed records.
 - `workout_date` is the logical local calendar date in `YYYY-MM-DD` form.
-- `activity` is `strength` (default), `cardio`, `climbing`, or `ski`. Strength workouts use the exercise/set editor. Cardio, climbing, and ski are one-tap day markers with no exercises, created from the `+` menu with today's date. The overview card shows the current month and the two before it as Sunday-first mini calendars, and both it and the history calendar color days blue (lifting), pink (climbing), green (cardio), and purple (ski), a palette checked for color-vision-deficiency separation; days with several activity types are split between their colors. Only strength workouts can be edited. Rows with `source = 'apple-calendar'` were imported from calendar history and keep the calendar title in `general_note`.
+- `activity` is `strength` (default), `cardio`, `climbing`, or `ski`. Strength workouts use the exercise/set editor. Cardio, climbing, and ski are one-tap day markers with no exercises, created from the `+` menu with today's date. The overview card shows the current month and the two before it as Sunday-first mini calendars, and both it and the history calendar color days lavender (lifting), dusty pink (climbing), sage (cardio), and muted yellow (ski); a legend always accompanies the colors; days with several activity types are split between their colors. Only strength workouts can be edited. Rows with `source = 'apple-calendar'` were imported from calendar history and keep the calendar title in `general_note`.
 - `started_at` and `finished_at` are nullable ISO timestamps. Imported historical records may legitimately have neither.
 - `unit` applies to every weighted set in the workout and is `kg` or `lbs`.
 
@@ -460,7 +460,7 @@ Important state groups include:
 - active primary tab (`history`, `today`, or `rm` internally);
 - completed workout history;
 - active draft and editing target;
-- list/calendar mode, filters, and collapsed months;
+- filters and collapsed months;
 - selected workout detail;
 - exercise library and frequent-exercise preferences;
 - save, error, and menu state.
@@ -475,7 +475,7 @@ The New Workout and Exercise Library overlays also implement left-edge touch ges
 
 ### 14.2 Swipe actions
 
-Workout rows, draft exercises, and draft sets use custom pointer-driven horizontal swipe containers. They claim pointer capture only after horizontal movement clearly exceeds vertical movement. Deletion appears as text rather than a permanent icon, keeping the default layout compact.
+Draft exercises and draft sets use custom pointer-driven horizontal swipe containers. Completed workouts are deleted from the day detail page (tap a calendar day), which lists every workout logged that day with edit (lifting) and two-step delete actions. They claim pointer capture only after horizontal movement clearly exceeds vertical movement. Deletion appears as text rather than a permanent icon, keeping the default layout compact.
 
 ### 14.3 Browser cache
 

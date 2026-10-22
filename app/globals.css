@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { --activity-strength:#426d91; --activity-climbing:#c07c86; --activity-cardio:#9ac59a; --activity-ski:#b2a1d4; --ink:#413c36; --paper:#f3efea; --card:#fdf9f4; --lime:#c8d7b8; --line:#dbd6ce; --muted:#7a756e; --font-sans:"DM Sans Variable", "DM Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; --font-serif:"Fraunces Variable", "Fraunces", "Songti SC", Georgia, serif; }
+:root { --activity-strength:#b7a3dc; --activity-climbing:#dba2a8; --activity-cardio:#9ac59a; --activity-ski:#e6c578; --ink:#413c36; --paper:#f3efea; --card:#fdf9f4; --lime:#c8d7b8; --line:#dbd6ce; --muted:#7a756e; --font-sans:"DM Sans Variable", "DM Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; --font-serif:"Fraunces Variable", "Fraunces", "Songti SC", Georgia, serif; }
 * { box-sizing:border-box; }
 html { background:#ddd7cf; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:var(--font-sans); font-variant-numeric:lining-nums tabular-nums; }
@@ -316,3 +316,31 @@ button { cursor:pointer; }
 .calendar-cell button.activity-mixed { text-shadow:0 1px 2px #423c3766; }
 .calendar-cell button:hover { filter:brightness(.95); }
 .calendar-cell button:not(.activity-climbing):not(.activity-cardio):not(.activity-ski):not(.activity-mixed):hover { background:var(--activity-strength); }
+
+/* Calendar-only history + day detail */
+.calendar-cell button,.calendar-cell button:hover,.calendar-cell button.activity-cardio,.calendar-cell button.activity-ski,.calendar-cell button.activity-cardio:hover,.calendar-cell button.activity-ski:hover { color:var(--ink); font-weight:600; }
+.calendar-cell button.activity-mixed { text-shadow:none; }
+.calendar-cell button.pr-day,.calendar-cell button.pr-day:hover { box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink); }
+.calendar-cell.today { color:var(--ink); font-weight:700; text-decoration:underline; text-underline-offset:4px; }
+.calendar-cell button.today { outline:1.5px solid var(--ink); outline-offset:2px; }
+.activity-month-grid button { display:block; width:100%; aspect-ratio:1; padding:0; border:0; border-radius:3px; cursor:pointer; transition:transform .12s ease,filter .12s ease; }
+.activity-month-grid button:hover { transform:scale(1.12); filter:brightness(.96); }
+.activity-month-grid button:focus-visible { outline:2px solid var(--ink); outline-offset:1px; }
+.day-entries { display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+.day-entry { padding:14px 16px 16px; border:1px solid var(--line); border-left:5px solid var(--activity-strength); border-radius:10px; background:var(--card); }
+.day-entry.activity-climbing { border-left-color:var(--activity-climbing); }.day-entry.activity-cardio { border-left-color:var(--activity-cardio); }.day-entry.activity-ski { border-left-color:var(--activity-ski); }
+.day-entry-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+.day-entry-title { min-width:0; display:flex; align-items:baseline; gap:8px; color:var(--ink); font:500 18px var(--font-serif); }
+.day-entry-title .activity-dot { width:9px; height:9px; align-self:center; }
+.day-entry-title small { overflow:hidden; color:var(--muted); font:500 12px var(--font-sans); text-overflow:ellipsis; white-space:nowrap; }
+.day-entry-actions { display:flex; align-items:center; gap:6px; flex:none; }
+.day-entry-actions .edit-workout { margin:0; }
+.day-entry-delete,.day-entry-cancel { height:32px; min-width:32px; padding:0 10px; border:1px solid var(--line); border-radius:6px; background:transparent; color:var(--muted); display:grid; place-items:center; font-size:11px; font-weight:600; }
+.day-entry-delete svg { width:15px; height:15px; stroke-width:1.7; }
+.day-entry-delete:hover { color:var(--ink); border-color:var(--muted); }
+.day-entry-delete.confirm { border-color:#b9807e; background:#b9807e; color:#fffaf5; }
+.day-entry-pr { margin:4px 0 10px; color:var(--muted); font-size:12px; }.day-entry-pr b { margin-right:4px; color:var(--ink); letter-spacing:.06em; }
+.day-entry-empty { margin:0; color:var(--muted); font-size:12px; }
+.day-entry .detail-exercises { margin-top:8px; }
+.day-entry-actions .edit-workout { width:32px; height:32px; border:1px solid var(--line); border-radius:6px; color:var(--muted); }.day-entry-actions .edit-workout svg { width:15px; height:15px; }
+.training-card-filter .collapse-all { width:38px; height:38px; }.collapse-all svg { width:15px; height:15px; stroke-width:1.8; }
