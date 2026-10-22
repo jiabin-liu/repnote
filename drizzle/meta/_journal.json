@@ -57,6 +57,13 @@
       "when": 1792647875951,
       "tag": "0007_app_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792652216736,
+      "tag": "0008_reclassify_racket_sports",
+      "breakpoints": true
     }
   ]
 }

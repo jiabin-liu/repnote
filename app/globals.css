@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { --activity-strength:#e2d6f8; --activity-strength-edge:#c3b0ec; --activity-climbing:#f4a6c0; --activity-cardio:#cfe5fb; --activity-cardio-edge:#97c3ec; --activity-ski:#f6d47c; --activity-tennis:#ffd4bd; --activity-tennis-edge:#f2a882; --activity-pickleball:#c9f0dc; --activity-pickleball-edge:#86d1ab; --ink:#6b5670; --paper:#fff6fa; --card:rgba(255,255,255,.7); --lime:#f9b9cf; --line:#f1d9e5; --muted:#827383; --dream-pink:#ffd3e4; --dream-lilac:#e8dcff; --dream-sky:#d6ecff; --glow:0 10px 28px rgba(240,150,190,.18); --font-sans:"Nunito Variable", "Nunito", ui-rounded, "SF Pro Rounded", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; --font-serif:"Fredoka Variable", "Fredoka", ui-rounded, "SF Pro Rounded", "PingFang SC", sans-serif; }
+:root { --activity-strength:#e2d6f8; --activity-strength-edge:#c3b0ec; --activity-climbing:#f4a6c0; --activity-cardio:#cfe5fb; --activity-cardio-edge:#97c3ec; --activity-ski:#dcf1ff; --activity-ski-edge:#97cdf0; --activity-tennis:#dff6e8; --activity-tennis-edge:#a5dcbe; --activity-pickleball:#fff1a6; --activity-pickleball-edge:#f0cf5e; --ink:#6b5670; --paper:#fff6fa; --card:rgba(255,255,255,.7); --lime:#f9b9cf; --line:#f1d9e5; --muted:#827383; --dream-pink:#ffd3e4; --dream-lilac:#e8dcff; --dream-sky:#d6ecff; --glow:0 10px 28px rgba(240,150,190,.18); --font-sans:"Nunito Variable", "Nunito", ui-rounded, "SF Pro Rounded", -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; --font-serif:"Fredoka Variable", "Fredoka", ui-rounded, "SF Pro Rounded", "PingFang SC", sans-serif; }
 * { box-sizing:border-box; }
 html { background:#e5d7de; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:var(--font-sans); font-variant-numeric:lining-nums tabular-nums; }
@@ -504,15 +504,25 @@ body { background:transparent; }
 /* Tennis (pale peach) and pickleball (pale mint), each with a soft edge */
 .activity-cell.activity-tennis,.calendar-cell button.activity-tennis,.calendar-cell button.activity-tennis:hover { background:var(--activity-tennis); box-shadow:inset 0 0 0 1.5px var(--activity-tennis-edge); color:var(--ink); }
 .activity-cell.activity-pickleball,.calendar-cell button.activity-pickleball,.calendar-cell button.activity-pickleball:hover { background:var(--activity-pickleball); box-shadow:inset 0 0 0 1.5px var(--activity-pickleball-edge); color:var(--ink); }
-.calendar-cell:has(> button.activity-tennis) { filter:drop-shadow(0 0 1px var(--activity-tennis-edge)) drop-shadow(0 5px 5px rgba(245,170,130,.33)); }
-.calendar-cell:has(> button.activity-pickleball) { filter:drop-shadow(0 0 1px var(--activity-pickleball-edge)) drop-shadow(0 5px 5px rgba(120,200,160,.33)); }
-.activity-month-grid button.activity-tennis { background:#ffc9ac; }
-.activity-month-grid button.activity-pickleball { background:#b5e9cf; }
+.calendar-cell:has(> button.activity-tennis) { filter:drop-shadow(0 0 1px var(--activity-tennis-edge)) drop-shadow(0 5px 5px rgba(140,205,170,.33)); }
+.calendar-cell:has(> button.activity-pickleball) { filter:drop-shadow(0 0 1px var(--activity-pickleball-edge)) drop-shadow(0 5px 5px rgba(240,205,90,.35)); }
+.activity-month-grid button.activity-tennis { background:#cdeedb; }
+.activity-month-grid button.activity-pickleball { background:#ffe97f; }
 .activity-dot.activity-tennis,.history-activity-name.activity-tennis>i { background:var(--activity-tennis); box-shadow:inset 0 0 0 1px var(--activity-tennis-edge); }
 .activity-dot.activity-pickleball,.history-activity-name.activity-pickleball>i { background:var(--activity-pickleball); box-shadow:inset 0 0 0 1px var(--activity-pickleball-edge); }
 .day-entry.activity-tennis { border-left-color:var(--activity-tennis-edge) !important; }
 .day-entry.activity-pickleball { border-left-color:var(--activity-pickleball-edge) !important; }
-.activity-heart.activity-tennis { background:#ffc4a5; }
-.activity-heart.activity-pickleball { background:#aee6c9; }
+.activity-heart.activity-tennis { background:#c6ecd6; }
+.activity-heart.activity-pickleball { background:#ffe67a; }
 .new-entry-options { grid-template-columns:1fr 1fr; }
 .new-entry-option { min-height:74px; }
+
+/* ❄ Ski days are pale icy-blue snowflakes */
+:root { --snow-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23000' stroke-width='2.6' stroke-linecap='round' fill='none'%3E%3Cpath d='M12 12L12.00 1.80M12.00 4.60L14.14 2.22M12.00 4.60L9.86 2.22M12 12L3.17 6.90M5.59 8.30L4.60 5.26M5.59 8.30L2.46 8.97M12 12L3.17 17.10M5.59 15.70L2.46 15.03M5.59 15.70L4.60 18.74M12 12L12.00 22.20M12.00 19.40L9.86 21.78M12.00 19.40L14.14 21.78M12 12L20.83 17.10M18.41 15.70L19.40 18.74M18.41 15.70L21.54 15.03M12 12L20.83 6.90M18.41 8.30L21.54 8.97M18.41 8.30L19.40 5.26'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='6.6'/%3E%3C/svg%3E"); }
+.calendar-cell:has(> button.activity-ski) { filter:drop-shadow(0 0 1px var(--activity-ski-edge)) drop-shadow(0 5px 5px rgba(130,190,235,.35)); }
+.calendar-cell button.activity-ski,.calendar-cell button.activity-ski:hover { width:44px; height:44px; padding:0; background:var(--activity-ski); -webkit-mask:var(--snow-mask) center/contain no-repeat; mask:var(--snow-mask) center/contain no-repeat; font-size:12px; }
+.activity-month-grid button.activity-ski { background:#c4e5fb; -webkit-mask:var(--snow-mask) center/contain no-repeat; mask:var(--snow-mask) center/contain no-repeat; }
+.activity-cell.activity-ski { background:var(--activity-ski); }
+.activity-heart.activity-ski { background:#bfe1fa; -webkit-mask:var(--snow-mask) center/contain no-repeat; mask:var(--snow-mask) center/contain no-repeat; width:32px; height:32px; }
+.activity-dot.activity-ski,.history-activity-name.activity-ski>i { background:var(--activity-ski); box-shadow:inset 0 0 0 1px var(--activity-ski-edge); }
+.day-entry.activity-ski { border-left-color:var(--activity-ski-edge) !important; }
