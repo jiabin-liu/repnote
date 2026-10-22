@@ -397,3 +397,12 @@ body { background:transparent; }
 .day-entry.activity-climbing { border-left-color:var(--activity-climbing) !important; }.day-entry.activity-cardio { border-left-color:var(--activity-cardio) !important; }.day-entry.activity-ski { border-left-color:var(--activity-ski) !important; }
 .day-entry-delete.confirm { border-color:#e889ad !important; background:#e889ad !important; color:#fff; }
 .has-photo-background .workout-detail-page,.has-photo-background .exercise-library-page { background:rgba(255,246,250,.4); backdrop-filter:blur(10px) saturate(1.1); -webkit-backdrop-filter:blur(10px) saturate(1.1); }
+/* With a photo background, let the picture show through the glass */
+.has-photo-background .app-backdrop::after { background:linear-gradient(180deg,rgba(255,246,250,.05),rgba(255,246,250,.18)); }
+.has-photo-background .training-duration-card,.has-photo-background .big-three-highlight,.has-photo-background .calendar-month,.has-photo-background .day-entry,.has-photo-background .exercise-card,.has-photo-background .note-card,.has-photo-background .exercise-library-panel,.has-photo-background .rm-card,.has-photo-background .empty-state {
+  background:rgba(255,255,255,.38) !important; border-color:rgba(255,255,255,.65) !important; backdrop-filter:blur(5px) saturate(1.15); -webkit-backdrop-filter:blur(5px) saturate(1.15); }
+.has-photo-background .topbar,.has-photo-background .tabbar { background:rgba(255,255,255,.42); }
+.has-photo-background .workout-detail-page,.has-photo-background .exercise-library-page { background:rgba(255,246,250,.18); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.has-photo-background .activity-cell.rest { background:rgba(255,255,255,.6); }
+.has-photo-background .history-screen,.has-photo-background .detail-page-inner { text-shadow:0 0 6px rgba(255,255,255,.85); }
+.has-photo-background .workout-detail-page,.has-photo-background .exercise-library-page { background:rgba(255,246,250,.22); backdrop-filter:blur(14px) saturate(1.1); -webkit-backdrop-filter:blur(14px) saturate(1.1); }
