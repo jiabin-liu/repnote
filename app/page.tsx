@@ -56,7 +56,8 @@ const formatRecordDate = (date: string) => new Intl.DateTimeFormat("en-US", { ye
 const formatMonthName = (month: string | number) => new Intl.DateTimeFormat("en-US", { month: "long" }).format(new Date(2000, Number.parseInt(String(month), 10) - 1, 1));
 const LIFT_RECORD_NAMES = ["Bulgarian Split Squat", "Barbell Squat", "Bicep Curl", "Single Leg Deadlift"] as const;
 type LiftBest = { kg: number; reps: number | null; date: string };
-const ACTIVITY_DAYS = 30;
+const ACTIVITY_MONTHS = 3;
+const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const localDateKey = () => new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const dateFromWorkout = (workout: Workout) => new Date(`${workout.date}T12:00:00`);
@@ -545,28 +546,29 @@ function RepnoteApp() {
   }), [history]);
 
   const recentActivity = useMemo(() => {
-    const today = new Date(`${localDateKey()}T12:00:00`);
-    const setsByDate = new Map<string, number>();
+    const todayKey = localDateKey();
+    const today = new Date(`${todayKey}T12:00:00`);
     const activitiesByDate = new Map<string, Set<Activity>>();
+    const notesByDate = new Map<string, string[]>();
     history.forEach((workout) => {
       if (!countsAsWorkout(workout)) return;
       activitiesByDate.set(workout.date, (activitiesByDate.get(workout.date) ?? new Set<Activity>()).add(activityOf(workout)));
-      if (activityOf(workout) !== "strength") return;
-      const sets = workout.exercises.reduce((sum, exercise) => sum + exercise.sets.length, 0);
-      // Calendar-imported lifting days have no sets; show them at the middle intensity.
-      setsByDate.set(workout.date, (setsByDate.get(workout.date) ?? 0) + (sets || (workout.source === "apple-calendar" ? 10 : 1)));
+      const label = activityOf(workout) === "strength" && workout.exercises.length ? workout.exercises.map((exercise) => exercise.name).join(", ") : workout.note;
+      if (label) notesByDate.set(workout.date, [...(notesByDate.get(workout.date) ?? []), label]);
     });
-    const days = Array.from({ length: ACTIVITY_DAYS }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (ACTIVITY_DAYS - 1 - index));
-      const key = dateKey(date);
-      const sets = setsByDate.get(key) ?? 0;
-      const activities = ACTIVITY_ORDER.filter((activity) => activitiesByDate.get(key)?.has(activity));
-      return { key, sets, activities, level: sets === 0 ? 0 : sets < 10 ? 1 : sets < 20 ? 2 : 3 };
+    // The current month plus the previous ones, oldest first, each laid out like a calendar (Sunday first).
+    const months = Array.from({ length: ACTIVITY_MONTHS }, (_, index) => {
+      const first = new Date(today.getFullYear(), today.getMonth() - (ACTIVITY_MONTHS - 1 - index), 1, 12);
+      const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      const days = Array.from({ length: daysInMonth }, (_, dayIndex) => {
+        const key = dateKey(new Date(first.getFullYear(), first.getMonth(), dayIndex + 1, 12));
+        const activities = ACTIVITY_ORDER.filter((activity) => activitiesByDate.get(key)?.has(activity));
+        return { key, day: dayIndex + 1, activities, notes: notesByDate.get(key) ?? [], isToday: key === todayKey, isFuture: key > todayKey };
+      });
+      return { key: dateKey(first), label: new Intl.DateTimeFormat("en-US", { month: "short" }).format(first), leadingBlanks: first.getDay(), days };
     });
-    // Pad the first column so rows line up with weekdays (Monday first), like a GitHub contribution graph.
-    const leadingBlanks = (new Date(`${days[0].key}T12:00:00`).getDay() + 6) % 7;
-    return { days, leadingBlanks, workoutDays: days.filter((day) => day.activities.length > 0).length };
+    const workoutDays = months.reduce((sum, month) => sum + month.days.filter((day) => day.activities.length > 0).length, 0);
+    return { months, workoutDays };
   }, [history]);
 
   const formatHighlightWeight = (kg: number) => {
@@ -804,9 +806,11 @@ function RepnoteApp() {
     <div className="history-screen">
       <section className="training-duration-card" aria-label="Workout overview and controls">
         <div className="training-card-top">
-          <div className="training-card-summary"><strong>{recentActivity.workoutDays}</strong><div><span>Workouts · past {ACTIVITY_DAYS} days</span><span className="activity-legend" aria-label="Activity colors">{ACTIVITY_ORDER.map((activity) => <span key={activity}><i className={`activity-dot activity-${activity}`} aria-hidden="true" />{ACTIVITY_LABELS[activity]}</span>)}</span><small>{recentActivity.workoutDays ? "Keep it going" : "Start a workout to light up the grid"}</small></div><div className="activity-grid" role="img" aria-label={`Workout days in the past ${ACTIVITY_DAYS} days: ${recentActivity.workoutDays}`}>{/* Cells depend on the browser's local date, so render them only after hydration. */}{ready && Array.from({ length: recentActivity.leadingBlanks }, (_, index) => <i key={`blank-${index}`} className="activity-blank" />)}{ready && recentActivity.days.map((day) => <i key={day.key} className={`activity-cell ${day.activities.length === 0 ? "level-0" : day.activities.length > 1 ? "activity-mixed" : day.activities[0] === "strength" ? `activity-strength level-${day.level}` : `activity-${day.activities[0]}`}`} style={activitySplit(day.activities)} title={`${formatRecordDate(day.key)}: ${day.activities.length ? day.activities.map((activity) => activity === "strength" && day.sets && !history.some((w) => w.date === day.key && w.source === "apple-calendar") ? `Lifting (${day.sets} sets)` : ACTIVITY_LABELS[activity]).join(" + ") : "rest"}`} />)}</div></div>
+          <div className="training-card-summary"><strong>{recentActivity.workoutDays}</strong><div><span>Workouts · last {ACTIVITY_MONTHS} months</span><span className="activity-legend" aria-label="Activity colors">{ACTIVITY_ORDER.map((activity) => <span key={activity}><i className={`activity-dot activity-${activity}`} aria-hidden="true" />{ACTIVITY_LABELS[activity]}</span>)}</span></div></div>
           <div className="new-entry-actions" ref={newEntryMenuRef}><button className="history-new-workout" aria-label={draft ? "Continue workout or log activity" : "Log workout"} title={draft ? "Continue workout" : "Log workout"} aria-haspopup="menu" aria-expanded={showNewEntryMenu} onClick={() => setShowNewEntryMenu((open) => !open)}>{draft ? <FileInput aria-hidden="true" /> : <Plus aria-hidden="true" />}</button>{showNewEntryMenu && <div className="workout-actions-menu new-entry-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setShowNewEntryMenu(false); if (draft) openDraftView(); else startWorkout(); }}><i className="activity-dot activity-strength" aria-hidden="true" />{draft ? editingWorkoutId ? "Continue editing" : "Continue lifting" : "Lifting"}</button><button type="button" role="menuitem" onClick={() => void logActivity("climbing")}><i className="activity-dot activity-climbing" aria-hidden="true" />Climbing today</button><button type="button" role="menuitem" onClick={() => void logActivity("cardio")}><i className="activity-dot activity-cardio" aria-hidden="true" />Cardio today</button><button type="button" role="menuitem" onClick={() => void logActivity("ski")}><i className="activity-dot activity-ski" aria-hidden="true" />Ski today</button></div>}</div>
         </div>
+        {/* Cells depend on the browser's local date, so render them only after hydration. */}
+        <div className="activity-months" role="img" aria-label={`Workout days in the last ${ACTIVITY_MONTHS} months: ${recentActivity.workoutDays}`}>{ready && recentActivity.months.map((month) => <div className="activity-month" key={month.key}><b>{month.label}</b><div className="activity-month-grid">{WEEKDAY_INITIALS.map((initial, index) => <span className="activity-weekday" key={`w-${index}`}>{initial}</span>)}{Array.from({ length: month.leadingBlanks }, (_, index) => <i key={`blank-${index}`} className="activity-blank" />)}{month.days.map((day) => <i key={day.key} className={["activity-cell", day.activities.length === 0 ? (day.isFuture ? "future" : "rest") : day.activities.length > 1 ? "activity-mixed" : `activity-${day.activities[0]}`, day.isToday ? "today" : ""].filter(Boolean).join(" ")} style={activitySplit(day.activities)} title={day.isFuture ? undefined : `${formatRecordDate(day.key)}: ${day.activities.length ? `${day.activities.map((activity) => ACTIVITY_LABELS[activity]).join(" + ")}${day.notes.length ? ` (${day.notes.join("; ")})` : ""}` : "rest"}`} />)}</div></div>)}</div>
         <div className="training-card-filter"><span>Filter</span><CustomSelect className="exercise-filter" ariaLabel="Filter workouts by exercise" value={exerciseFilter} onChange={setExerciseFilter} options={[{ value: "", label: "All exercises" }, ...exerciseFilterOptions.map((name) => ({ value: name, label: name }))]} /><div className="history-controls"><button type="button" className="collapse-all" aria-label={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} title={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} aria-pressed={allMonthsCollapsed} onClick={toggleAllMonths}>{allMonthsCollapsed ? <ChevronsDown aria-hidden="true" /> : <ChevronsUp aria-hidden="true" />}</button><div className="history-view-switch" aria-label="View mode"><button className={historyView === "list" ? "active" : ""} aria-label="List view" title="List view" aria-pressed={historyView === "list"} onClick={() => setHistoryView("list")}><List aria-hidden="true" /></button><button className={historyView === "calendar" ? "active" : ""} aria-label="Calendar view" title="Calendar view" aria-pressed={historyView === "calendar"} onClick={() => setHistoryView("calendar")}><CalendarDays aria-hidden="true" /></button></div></div></div>
       </section>
       {history.length > 0 && <section className="big-three-highlight" aria-labelledby="lift-records-title"><div className="big-three-heading"><h2 id="lift-records-title">Best lifts</h2><div className="big-three-meta"><div className={`highlight-unit-toggle ${highlightUnit}`} role="group" aria-label="Best lifts weight unit"><button type="button" aria-pressed={highlightUnit === "lbs"} onClick={() => setHighlightUnit("lbs")}>LBS</button><button type="button" aria-pressed={highlightUnit === "kg"} onClick={() => setHighlightUnit("kg")}>KG</button></div></div></div><div className="big-three-grid">{liftRecords.map((record) => <div className="big-three-record" key={record.name}><span title={record.name}>{record.name}</span><strong>{record.best ? formatHighlightWeight(record.best.kg) : "—"} <small>{record.best ? highlightUnit : ""}</small></strong><em className="lift-record-reps">{record.best?.reps ? `× ${record.best.reps} ${record.best.reps === 1 ? "rep" : "reps"}` : "\u00a0"}</em><time dateTime={record.best?.date}>{record.best ? formatRecordDate(record.best.date) : "No record"}</time></div>)}</div></section>}
