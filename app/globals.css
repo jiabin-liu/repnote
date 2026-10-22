@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { --ink:#1c241c; --paper:#f2f0e9; --card:#fbfaf6; --lime:#d7ff3f; --line:#d8d7cf; --muted:#73786f; }
+:root { --activity-strength:#2878d4; --activity-climbing:#e0569b; --activity-cardio:#2e9d6a; --activity-ski:#8b5cf6; --ink:#1c241c; --paper:#f2f0e9; --card:#fbfaf6; --lime:#d7ff3f; --line:#d8d7cf; --muted:#73786f; }
 * { box-sizing:border-box; }
 html { background:#d9d8d2; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; font-variant-numeric:lining-nums tabular-nums; }
@@ -277,3 +277,24 @@ button { cursor:pointer; }
 .activity-cell.level-1 { background:#d9f08a; }
 .activity-cell.level-2 { background:#b5d935; }
 .activity-cell.level-3 { background:#6f8f12; }
+
+/* Activity types: lifting (blue), climbing (pink), cardio (green), ski (purple) */
+.activity-cell.activity-strength.level-1 { background:#9cc3f0; }.activity-cell.activity-strength.level-2 { background:#4f93e0; }.activity-cell.activity-strength.level-3 { background:#1a5fb0; }
+.activity-cell.activity-climbing { background:var(--activity-climbing); }.activity-cell.activity-cardio { background:var(--activity-cardio); }.activity-cell.activity-ski { background:var(--activity-ski); }
+.calendar-cell button.activity-climbing { background:var(--activity-climbing); }.calendar-cell button.activity-climbing:hover { background:#c93f85; }
+.calendar-cell button.activity-cardio { background:var(--activity-cardio); }.calendar-cell button.activity-cardio:hover { background:#24855a; }
+.calendar-cell button.activity-ski { background:var(--activity-ski); }.calendar-cell button.activity-ski:hover { background:#7344e0; }
+.calendar-cell button.activity-mixed { text-shadow:0 1px 2px #0005; }
+.activity-dot { flex:none; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--activity-strength); }
+.activity-dot.activity-climbing { background:var(--activity-climbing); }.activity-dot.activity-cardio { background:var(--activity-cardio); }.activity-dot.activity-ski { background:var(--activity-ski); }
+.training-card-summary .activity-legend { display:flex; flex-wrap:wrap; gap:3px 8px; margin-top:2px; color:#80867c; font-size:8px; font-weight:750; letter-spacing:.03em; }
+.training-card-summary .activity-legend>span { display:inline-flex; align-items:center; gap:3px; }
+.training-card-summary .activity-legend .activity-dot { width:6px; height:6px; border-radius:2px; }
+.new-entry-actions { position:relative; flex:0 0 auto; }
+.new-entry-menu { min-width:172px; }.new-entry-menu button { gap:9px; }
+.history-activity-name { min-height:18px; display:inline-flex; align-items:center; gap:6px; min-width:0; color:var(--ink); font:700 11px Inter,ui-sans-serif,sans-serif; white-space:nowrap; }
+.history-activity-name>i { width:7px; height:7px; border-radius:50%; flex:none; background:var(--activity-strength); }
+.history-activity-name.activity-climbing>i { background:var(--activity-climbing); }.history-activity-name.activity-cardio>i { background:var(--activity-cardio); }.history-activity-name.activity-ski>i { background:var(--activity-ski); }
+.history-activity-name small { overflow:hidden; text-overflow:ellipsis; color:#7a8077; font-weight:600; font-size:10px; }
+.detail-activity { display:inline-flex; align-items:center; gap:8px; margin:4px 0 10px; color:var(--ink); font:750 13px Inter,ui-sans-serif,sans-serif; letter-spacing:.02em; }
+.detail-activity-note { margin:0 0 14px; color:#6f756c; font-size:12px; }

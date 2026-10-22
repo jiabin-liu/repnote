@@ -159,6 +159,7 @@ erDiagram
     text workout_date
     text status
     text draft_of_workout_id
+    text activity
     text unit
     text general_note
     text started_at
@@ -213,6 +214,7 @@ One row represents either a draft or a completed workout.
 - `status` is `draft` or `completed`.
 - `draft_of_workout_id` points to the completed record being edited; it is not a foreign key and is cleared on completed records.
 - `workout_date` is the logical local calendar date in `YYYY-MM-DD` form.
+- `activity` is `strength` (default), `cardio`, `climbing`, or `ski`. Strength workouts use the exercise/set editor. Cardio, climbing, and ski are one-tap day markers with no exercises, created from the `+` menu with today's date. The 30-day activity grid and the calendar color days blue (lifting, shaded by set count), pink (climbing), green (cardio), and purple (ski); days with several activity types are split between their colors. Only strength workouts can be edited. Rows with `source = 'apple-calendar'` were imported from calendar history and keep the calendar title in `general_note`.
 - `started_at` and `finished_at` are nullable ISO timestamps. Imported historical records may legitimately have neither.
 - `unit` applies to every weighted set in the workout and is `kg` or `lbs`.
 

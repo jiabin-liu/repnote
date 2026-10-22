@@ -6,6 +6,7 @@ export const workouts = sqliteTable("workouts", {
   workoutDate: text("workout_date").notNull(),
   status: text("status", { enum: ["draft", "completed"] }).notNull().default("completed"),
   draftOfWorkoutId: text("draft_of_workout_id"),
+  activity: text("activity", { enum: ["strength", "cardio", "climbing", "ski"] }).notNull().default("strength"),
   unit: text("unit", { enum: ["kg", "lbs"] }).notNull().default("kg"),
   generalNote: text("general_note").notNull().default(""),
   startedAt: text("started_at"),
