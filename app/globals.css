@@ -440,3 +440,56 @@ body { background:transparent; }
 .activity-month-grid .activity-cell.rest.today,.activity-month-grid .activity-cell.future.today { transform:scale(.8); box-shadow:inset 0 0 0 2px #e889ad !important; background:#fff; }
 .activity-month-grid button.activity-strength { background:#d9c9f6; }
 .activity-month-grid button.activity-cardio { background:#bcdaf8; }
+
+/* Tabs: three items */
+.tabbar { gap:36px; }
+.tabbar button { width:96px; }
+.tabbar button>svg { width:22px; height:22px; stroke-width:1.8; }
+@media (max-width:650px) { .tabbar { gap:0; justify-content:space-around; } .tabbar button { width:88px; } }
+.lifts-screen { max-width:860px; margin:auto; }
+.lifts-screen .big-three-highlight { margin-bottom:0; }
+
+/* ♡ Big floating heart "new workout" button ♡ */
+.new-workout-fab { position:fixed; z-index:32; right:max(18px, calc(50% - 520px + 24px)); bottom:calc(74px + 18px + env(safe-area-inset-bottom)); padding:0; border:0; background:none; display:flex; flex-direction:column; align-items:center; gap:2px; color:#d76b97; font:600 11px var(--font-serif); letter-spacing:.02em; filter:drop-shadow(0 8px 10px rgba(236,120,170,.35)) drop-shadow(0 0 1px #fff); animation:fab-float 3.2s ease-in-out infinite; }
+.new-workout-fab .fab-heart { position:relative; width:74px; height:68px; display:grid; place-items:center; padding-bottom:8px;
+  background:radial-gradient(ellipse 30% 22% at 30% 26%, rgba(255,255,255,.9), transparent 70%), linear-gradient(160deg,#ffc2d6 0%,#f79bbd 55%,#ee86ad 100%);
+  -webkit-mask:var(--heart-mask) center/contain no-repeat; mask:var(--heart-mask) center/contain no-repeat; transition:transform .18s ease; }
+.new-workout-fab .fab-heart svg { width:30px; height:30px; color:#fff; stroke-width:3; }
+.new-workout-fab .fab-label { padding:2px 9px; border-radius:999px; background:rgba(255,255,255,.85); }
+.new-workout-fab::before,.new-workout-fab::after { content:"✦"; position:absolute; color:#f7b6cd; font-size:12px; text-shadow:0 0 4px #fff; }
+.new-workout-fab::before { top:-6px; left:-8px; }
+.new-workout-fab::after { top:10px; right:-10px; font-size:9px; color:#c9b6f2; }
+.new-workout-fab:hover .fab-heart { transform:scale(1.06); }
+.new-workout-fab:active .fab-heart { transform:scale(.94); }
+@keyframes fab-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
+@media (prefers-reduced-motion:reduce) { .new-workout-fab { animation:none; } }
+.content { padding-bottom:150px; }
+
+/* Bottom sheet for choosing what to log */
+.new-entry-sheet-backdrop { position:fixed; inset:0; z-index:60; background:rgba(120,80,120,.18); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); display:flex; align-items:flex-end; justify-content:center; animation:sheet-fade .18s ease; }
+.new-entry-sheet { width:min(520px,100%); margin:0 0 env(safe-area-inset-bottom); padding:18px 18px 24px; border-radius:28px 28px 0 0; background:rgba(255,250,253,.96); box-shadow:0 -10px 40px rgba(220,140,180,.25); animation:sheet-up .24s cubic-bezier(.2,.9,.3,1.2); }
+.new-entry-sheet header { display:flex; align-items:center; justify-content:space-between; margin:0 4px 14px; }
+.new-entry-sheet h2 { margin:0; color:var(--ink); font:500 20px var(--font-serif); }
+.sheet-close { width:34px; height:34px; border:0; border-radius:50%; background:#fde8f1; color:#c8749a; display:grid; place-items:center; }
+.sheet-close svg { width:18px; height:18px; }
+.new-entry-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.new-entry-option { min-height:84px; padding:12px; border:1px solid #f5dde9; border-radius:20px; background:#fff; display:flex; align-items:center; gap:10px; text-align:left; transition:transform .15s ease, box-shadow .15s ease; }
+.new-entry-option:hover,.new-entry-option:focus-visible { transform:translateY(-2px); box-shadow:0 8px 18px rgba(230,150,190,.22); outline:none; }
+.new-entry-option b { display:block; color:var(--ink); font:500 16px var(--font-serif); }
+.new-entry-option small { display:block; margin-top:2px; color:var(--muted); font-size:10px; line-height:1.3; }
+.activity-heart { flex:none; width:34px; height:31px; background:var(--activity-strength); -webkit-mask:var(--heart-mask) center/contain no-repeat; mask:var(--heart-mask) center/contain no-repeat; }
+.activity-heart.activity-strength { background:#d4c2f4; }.activity-heart.activity-climbing { background:var(--activity-climbing); }.activity-heart.activity-cardio { background:#b6d6f7; }.activity-heart.activity-ski { background:var(--activity-ski); }
+@keyframes sheet-up { from { transform:translateY(100%); } to { transform:translateY(0); } }
+@keyframes sheet-fade { from { opacity:0; } to { opacity:1; } }
+
+/* Today in the month calendar: tap to add */
+.calendar-cell .today-add { position:relative; width:40px; height:40px; padding:0; border:1.5px dashed #ee9dbd; border-radius:50%; background:rgba(255,255,255,.75); color:#d76b97; display:grid; place-items:center; -webkit-mask:none; mask:none; transform:none; filter:none; }
+.calendar-cell .today-add span { font-weight:700; font-size:13px; line-height:1; margin-top:-4px; }
+.calendar-cell .today-add svg { position:absolute; bottom:3px; width:10px; height:10px; stroke-width:3; }
+.calendar-cell .today-add::before { display:none; }
+.calendar-cell:has(> .today-add) { filter:none; }
+.calendar-cell:has(> .today-add)::before { display:none; }
+.calendar-cell .today-add:hover { background:#fff0f6; transform:translateY(-2px); }
+.detail-heading .day-add { flex:none; height:38px; padding:0 14px; border:0; border-radius:999px; background:linear-gradient(135deg,#f9b3cb,#c9b6f2); color:#fff; display:flex; align-items:center; gap:5px; font:600 13px var(--font-serif); box-shadow:0 6px 14px rgba(236,140,180,.3); }
+.detail-heading .day-add svg { width:15px; height:15px; stroke-width:2.6; }
+.calendar-cell .today-add,.calendar-cell .today-add:hover { background:rgba(255,255,255,.8) !important; box-shadow:0 4px 10px rgba(236,150,190,.22) !important; }
