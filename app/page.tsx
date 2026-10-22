@@ -18,7 +18,7 @@ type PrHighlight = {
   previousBestKg: number | null;
   improvementKg: number | null;
 };
-type Activity = "strength" | "cardio" | "climbing" | "ski";
+type Activity = "strength" | "cardio" | "climbing" | "ski" | "tennis" | "pickleball";
 type Workout = {
   id: string;
   activity?: Activity;
@@ -35,8 +35,8 @@ type Workout = {
 };
 
 const PR_LIFT_NAMES: Record<PrHighlight["lift"], string> = { bench_press: "Bench Press", squat: "Squat", deadlift: "Deadlift" };
-const ACTIVITY_LABELS: Record<Activity, string> = { strength: "Lifting", cardio: "Cardio", climbing: "Climbing", ski: "Ski" };
-const ACTIVITY_ORDER: Activity[] = ["strength", "climbing", "cardio", "ski"];
+const ACTIVITY_LABELS: Record<Activity, string> = { strength: "Lifting", cardio: "Cardio", climbing: "Climbing", ski: "Ski", tennis: "Tennis", pickleball: "Pickleball" };
+const ACTIVITY_ORDER: Activity[] = ["strength", "climbing", "tennis", "pickleball", "cardio", "ski"];
 const activityOf = (workout: Workout): Activity => workout.activity ?? "strength";
 // A lifting day counts when it has exercises or was imported from the calendar (no sets recorded).
 const countsAsWorkout = (workout: Workout) => activityOf(workout) !== "strength" || workout.exercises.length > 0 || workout.source === "apple-calendar";
@@ -924,7 +924,9 @@ function RepnoteApp() {
   const newEntryOptions: { activity: Activity; label: string; hint: string }[] = [
     { activity: "strength", label: draft ? (editingWorkoutId ? "Continue editing" : "Continue lifting") : "Lifting", hint: draft ? "Back to your open workout" : "Log sets, reps and weight" },
     { activity: "climbing", label: "Climbing", hint: "Mark today as a climbing day" },
-    { activity: "cardio", label: "Cardio", hint: "Tennis, pickleball, a run…" },
+    { activity: "tennis", label: "Tennis", hint: "Mark today as a tennis day" },
+    { activity: "pickleball", label: "Pickleball", hint: "Mark today as a pickleball day" },
+    { activity: "cardio", label: "Cardio", hint: "A run, a hike, a swim…" },
     { activity: "ski", label: "Ski", hint: "Mark today as a ski day" },
   ];
   const chooseNewEntry = (activity: Activity) => {

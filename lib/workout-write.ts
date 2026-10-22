@@ -16,7 +16,7 @@ export type InputWorkout = {
 };
 
 const USER_ID = "owner";
-export const ACTIVITIES = ["strength", "cardio", "climbing", "ski"] as const;
+export const ACTIVITIES = ["strength", "cardio", "climbing", "ski", "tennis", "pickleball"] as const;
 export type Activity = typeof ACTIVITIES[number];
 export const normalizeActivity = (value: unknown): Activity => ACTIVITIES.includes(value as Activity) ? value as Activity : "strength";
 const cleanNumber = (value: unknown) => value === "" || value == null || !Number.isFinite(Number(value)) ? null : Number(value);

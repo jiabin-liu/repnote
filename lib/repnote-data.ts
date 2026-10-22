@@ -70,7 +70,7 @@ export async function readWorkouts(options: ReadWorkoutsOptions) {
     status: row.status === "draft" ? "draft" : "completed",
     draftOfWorkoutId: row.draft_of_workout_id ? String(row.draft_of_workout_id) : null,
     date: String(row.workout_date),
-    activity: row.activity === "cardio" || row.activity === "climbing" || row.activity === "ski" ? String(row.activity) : "strength",
+    activity: ["cardio", "climbing", "ski", "tennis", "pickleball"].includes(String(row.activity)) ? String(row.activity) : "strength",
     startedAt: row.started_at ? String(row.started_at) : null,
     finishedAt: row.finished_at ? String(row.finished_at) : null,
     unit: row.unit === "lbs" ? "lbs" : "kg",
