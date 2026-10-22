@@ -46,6 +46,58 @@ const formatPrWeight = (weight: number) => new Intl.NumberFormat("en-US", { maxi
 const HISTORY_KEY = "repnote-history-v1";
 const BACKGROUND_KEY = "repnote-background-updated-v1";
 const BUTTON_IMAGE_KEY = "repnote-button-image-updated-v1";
+// Sticker images saved from the web often have a white or fake "transparent" checkerboard baked in.
+// If the image has no real transparency, flood-fill from the edges through light, near-gray pixels
+// and make them transparent. Foreground is padded by `gap` px first so thin anti-aliased outlines
+// don't let the fill leak inside (e.g. into a white bow), then the fill grows back by `gap` px.
+const removeFlatBackground = (canvas: HTMLCanvasElement, gap = 3, minLight = 200) => {
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const { width: w, height: h } = canvas;
+  const image = context.getImageData(0, 0, w, h);
+  const data = image.data;
+  let hasTransparency = false;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 250) { hasTransparency = true; break; }
+  if (hasTransparency) return;
+  const size = w * h;
+  const isBackground = new Uint8Array(size);
+  for (let i = 0; i < size; i += 1) {
+    const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
+    isBackground[i] = Math.max(r, g, b) - Math.min(r, g, b) < 22 && Math.min(r, g, b) > minLight ? 1 : 0;
+  }
+  const neighbors = (i: number, visit: (j: number) => void) => {
+    const x = i % w, y = (i - x) / w;
+    if (x > 0) visit(i - 1);
+    if (x < w - 1) visit(i + 1);
+    if (y > 0) visit(i - w);
+    if (y < h - 1) visit(i + w);
+  };
+  // Distance (in steps) from each pixel to the nearest foreground pixel.
+  const distance = new Int32Array(size).fill(1 << 30);
+  let queue: number[] = [];
+  for (let i = 0; i < size; i += 1) if (!isBackground[i]) { distance[i] = 0; queue.push(i); }
+  for (let head = 0; head < queue.length; head += 1) {
+    const i = queue[head];
+    neighbors(i, (j) => { if (distance[j] > distance[i] + 1) { distance[j] = distance[i] + 1; queue.push(j); } });
+  }
+  const clear = new Uint8Array(size);
+  queue = [];
+  for (let i = 0; i < size; i += 1) {
+    const x = i % w, y = (i - x) / w;
+    if ((x === 0 || y === 0 || x === w - 1 || y === h - 1) && isBackground[i] && distance[i] > gap) { clear[i] = 1; queue.push(i); }
+  }
+  for (let head = 0; head < queue.length; head += 1) {
+    neighbors(queue[head], (j) => { if (!clear[j] && isBackground[j] && distance[j] > gap) { clear[j] = 1; queue.push(j); } });
+  }
+  let front = queue;
+  for (let step = 0; step <= gap; step += 1) {
+    const next: number[] = [];
+    for (const i of front) neighbors(i, (j) => { if (!clear[j] && isBackground[j]) { clear[j] = 1; next.push(j); } });
+    front = next;
+  }
+  for (let i = 0; i < size; i += 1) if (clear[i]) data[i * 4 + 3] = 0;
+  context.putImageData(image, 0, 0);
+};
 // Shrink a picked photo to a JPEG data URL small enough for one D1 value.
 const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82, type: "image/jpeg" | "image/png" = "image/jpeg") => {
   const bitmap = await createImageBitmap(file);
@@ -55,7 +107,10 @@ const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82, ty
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  if (type === "image/png") return canvas.toDataURL("image/png");
+  if (type === "image/png") {
+    removeFlatBackground(canvas);
+    return canvas.toDataURL("image/png");
+  }
   let dataUrl = canvas.toDataURL("image/jpeg", quality);
   for (let q = quality - 0.12; dataUrl.length > 1_700_000 && q > 0.4; q -= 0.12) dataUrl = canvas.toDataURL("image/jpeg", q);
   return dataUrl;
