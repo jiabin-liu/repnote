@@ -214,7 +214,7 @@ One row represents either a draft or a completed workout.
 - `status` is `draft` or `completed`.
 - `draft_of_workout_id` points to the completed record being edited; it is not a foreign key and is cleared on completed records.
 - `workout_date` is the logical local calendar date in `YYYY-MM-DD` form.
-- `activity` is `strength` (default), `cardio`, or `climbing`. Strength workouts use the exercise/set editor. Cardio and climbing are one-tap day markers with no exercises, created from the `+` menu with today's date. The calendar colors days blue (lifting), pink (climbing), and green (cardio); days with several activity types are split between their colors. Only strength workouts can be edited.
+- `activity` is `strength` (default), `cardio`, `climbing`, or `ski`. Strength workouts use the exercise/set editor. Cardio, climbing, and ski are one-tap day markers with no exercises, created from the `+` menu with today's date. The calendar colors days blue (lifting), pink (climbing), green (cardio), and purple (ski); days with several activity types are split between their colors. Only strength workouts can be edited.
 - `started_at` and `finished_at` are nullable ISO timestamps. Imported historical records may legitimately have neither.
 - `unit` applies to every weighted set in the workout and is `kg` or `lbs`.
 

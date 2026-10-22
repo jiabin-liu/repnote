@@ -18,7 +18,7 @@ type PrHighlight = {
   previousBestKg: number | null;
   improvementKg: number | null;
 };
-type Activity = "strength" | "cardio" | "climbing";
+type Activity = "strength" | "cardio" | "climbing" | "ski";
 type Workout = {
   id: string;
   activity?: Activity;
@@ -36,8 +36,8 @@ type Workout = {
 
 const PR_LIFT_LABELS: Record<PrHighlight["lift"], string> = { bench_press: "BP", squat: "SQ", deadlift: "DL" };
 const PR_LIFT_NAMES: Record<PrHighlight["lift"], string> = { bench_press: "Bench Press", squat: "Squat", deadlift: "Deadlift" };
-const ACTIVITY_LABELS: Record<Activity, string> = { strength: "Lifting", cardio: "Cardio", climbing: "Climbing" };
-const ACTIVITY_ORDER: Activity[] = ["strength", "climbing", "cardio"];
+const ACTIVITY_LABELS: Record<Activity, string> = { strength: "Lifting", cardio: "Cardio", climbing: "Climbing", ski: "Ski" };
+const ACTIVITY_ORDER: Activity[] = ["strength", "climbing", "cardio", "ski"];
 const activityOf = (workout: Workout): Activity => workout.activity ?? "strength";
 const formatPrWeight = (weight: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(weight);
 
@@ -113,7 +113,7 @@ function SwipeableHistoryRow({ workout, onOpen, onDelete }: { workout: Workout; 
         }}
       >
         <time dateTime={workout.date}><strong>{dateFromWorkout(workout).getDate()}</strong><span>{new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(dateFromWorkout(workout)).toUpperCase()}</span></time>
-        <div className="history-exercise-summary">{activityOf(workout) !== "strength" ? <span className={`history-activity-name activity-${activityOf(workout)}`}><i aria-hidden="true" />{ACTIVITY_LABELS[activityOf(workout)]}{workout.note ? <small>{workout.note}</small> : null}</span> : workout.exercises.length ? workout.exercises.map((exercise) => <span className="history-exercise-name" key={exercise.id}>{exercise.name}<i aria-label={`${exercise.sets.length} sets`}>×{exercise.sets.length}</i></span>) : <span className="history-exercise-name">Free training</span>}</div>
+        <div className="history-exercise-summary">{activityOf(workout) !== "strength" ? <span className={`history-activity-name activity-${activityOf(workout)}`}><i aria-hidden="true" />{ACTIVITY_LABELS[activityOf(workout)]}{workout.note ? <small>{workout.note}</small> : null}</span> : workout.exercises.length ? workout.exercises.map((exercise) => <span className="history-exercise-name" key={exercise.id}>{exercise.name}<i aria-label={`${exercise.sets.length} sets`}>×{exercise.sets.length}</i></span>) : <span className="history-exercise-name">{workout.source === "apple-calendar" && workout.note ? workout.note : "Free training"}</span>}</div>
         {workout.prHighlights?.length ? <span className="history-pr-highlight" aria-label={`New personal record: ${workout.prHighlights.map((highlight) => `${PR_LIFT_NAMES[highlight.lift]} ${formatPrWeight(highlight.weight)} ${highlight.unit}`).join(", ")}`}><b>PR</b><span>{workout.prHighlights.map((highlight) => `${PR_LIFT_LABELS[highlight.lift]} ${formatPrWeight(highlight.weight)} ${highlight.unit}`).join(" · ")}</span></span> : null}
       </button>
     </div>
@@ -535,7 +535,7 @@ function RepnoteApp() {
   }, [history]);
 
   const trainingStats = useMemo(() => {
-    const counted = history.filter((workout) => activityOf(workout) !== "strength" || workout.exercises.length > 0);
+    const counted = history.filter((workout) => activityOf(workout) !== "strength" || workout.exercises.length > 0 || workout.source === "apple-calendar");
     const workoutDays = new Set(counted.map((workout) => workout.date)).size;
     const firstWorkoutDate = counted.reduce<string | null>((first, workout) => !first || workout.date < first ? workout.date : first, null);
     return { workoutDays, firstWorkoutDate };
@@ -771,7 +771,7 @@ function RepnoteApp() {
       <section className="training-duration-card" aria-label="Workout overview and controls">
         <div className="training-card-top">
           <div className="training-card-summary"><strong>{trainingStats.workoutDays}</strong><div><span>Total workouts</span><small>{trainingStats.firstWorkoutDate ? `Since ${formatRecordDate(trainingStats.firstWorkoutDate)}` : "Start your first workout"}</small></div></div>
-          <div className="new-entry-actions" ref={newEntryMenuRef}><button className="history-new-workout" aria-label={draft ? "Continue workout or log activity" : "Log workout"} title={draft ? "Continue workout" : "Log workout"} aria-haspopup="menu" aria-expanded={showNewEntryMenu} onClick={() => setShowNewEntryMenu((open) => !open)}>{draft ? <FileInput aria-hidden="true" /> : <Plus aria-hidden="true" />}</button>{showNewEntryMenu && <div className="workout-actions-menu new-entry-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setShowNewEntryMenu(false); if (draft) openDraftView(); else startWorkout(); }}><i className="activity-dot activity-strength" aria-hidden="true" />{draft ? editingWorkoutId ? "Continue editing" : "Continue lifting" : "Lifting"}</button><button type="button" role="menuitem" onClick={() => void logActivity("climbing")}><i className="activity-dot activity-climbing" aria-hidden="true" />Climbing today</button><button type="button" role="menuitem" onClick={() => void logActivity("cardio")}><i className="activity-dot activity-cardio" aria-hidden="true" />Cardio today</button></div>}</div>
+          <div className="new-entry-actions" ref={newEntryMenuRef}><button className="history-new-workout" aria-label={draft ? "Continue workout or log activity" : "Log workout"} title={draft ? "Continue workout" : "Log workout"} aria-haspopup="menu" aria-expanded={showNewEntryMenu} onClick={() => setShowNewEntryMenu((open) => !open)}>{draft ? <FileInput aria-hidden="true" /> : <Plus aria-hidden="true" />}</button>{showNewEntryMenu && <div className="workout-actions-menu new-entry-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setShowNewEntryMenu(false); if (draft) openDraftView(); else startWorkout(); }}><i className="activity-dot activity-strength" aria-hidden="true" />{draft ? editingWorkoutId ? "Continue editing" : "Continue lifting" : "Lifting"}</button><button type="button" role="menuitem" onClick={() => void logActivity("climbing")}><i className="activity-dot activity-climbing" aria-hidden="true" />Climbing today</button><button type="button" role="menuitem" onClick={() => void logActivity("cardio")}><i className="activity-dot activity-cardio" aria-hidden="true" />Cardio today</button><button type="button" role="menuitem" onClick={() => void logActivity("ski")}><i className="activity-dot activity-ski" aria-hidden="true" />Ski today</button></div>}</div>
         </div>
         <div className="training-card-filter"><span>Filter</span><CustomSelect className="exercise-filter" ariaLabel="Filter workouts by exercise" value={exerciseFilter} onChange={setExerciseFilter} options={[{ value: "", label: "All exercises" }, ...exerciseFilterOptions.map((name) => ({ value: name, label: name }))]} /><div className="history-controls"><button type="button" className="collapse-all" aria-label={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} title={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} aria-pressed={allMonthsCollapsed} onClick={toggleAllMonths}>{allMonthsCollapsed ? <ChevronsDown aria-hidden="true" /> : <ChevronsUp aria-hidden="true" />}</button><div className="history-view-switch" aria-label="View mode"><button className={historyView === "list" ? "active" : ""} aria-label="List view" title="List view" aria-pressed={historyView === "list"} onClick={() => setHistoryView("list")}><List aria-hidden="true" /></button><button className={historyView === "calendar" ? "active" : ""} aria-label="Calendar view" title="Calendar view" aria-pressed={historyView === "calendar"} onClick={() => setHistoryView("calendar")}><CalendarDays aria-hidden="true" /></button></div></div></div>
       </section>

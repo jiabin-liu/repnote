@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root { --activity-strength:#2878d4; --activity-climbing:#e0569b; --activity-cardio:#2e9d6a; --ink:#1c241c; --paper:#f2f0e9; --card:#fbfaf6; --lime:#d7ff3f; --line:#d8d7cf; --muted:#73786f; }
+:root { --activity-strength:#2878d4; --activity-climbing:#e0569b; --activity-cardio:#2e9d6a; --activity-ski:#8b5cf6; --ink:#1c241c; --paper:#f2f0e9; --card:#fbfaf6; --lime:#d7ff3f; --line:#d8d7cf; --muted:#73786f; }
 * { box-sizing:border-box; }
 html { background:#d9d8d2; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; font-variant-numeric:lining-nums tabular-nums; }
@@ -271,7 +271,9 @@ button { cursor:pointer; }
   letter-spacing:0;
 }
 
-/* Activity types: lifting (blue), climbing (pink), cardio (green) */
+/* Activity types: lifting (blue), climbing (pink), cardio (green), ski (purple) */
+.calendar-cell button.activity-ski { background:var(--activity-ski); }.calendar-cell button.activity-ski:hover { background:#7344e0; }
+.activity-dot.activity-ski,.history-activity-name.activity-ski>i { background:var(--activity-ski); }
 .calendar-cell button.activity-climbing { background:var(--activity-climbing); }.calendar-cell button.activity-climbing:hover { background:#c93f85; }
 .calendar-cell button.activity-cardio { background:var(--activity-cardio); }.calendar-cell button.activity-cardio:hover { background:#24855a; }
 .calendar-cell button.activity-mixed { text-shadow:0 1px 2px #0005; }
