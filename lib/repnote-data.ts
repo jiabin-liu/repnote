@@ -72,6 +72,7 @@ export async function readWorkouts(options: ReadWorkoutsOptions) {
     date: String(row.workout_date),
     maxAttemptGrade: row.max_attempt_grade ? String(row.max_attempt_grade) : null,
     maxSendGrade: row.max_send_grade ? String(row.max_send_grade) : null,
+    climbStyle: row.climb_style ? String(row.climb_style) : null,
     activity: ["cardio", "climbing", "ski", "tennis", "pickleball"].includes(String(row.activity)) ? String(row.activity) : "strength",
     startedAt: row.started_at ? String(row.started_at) : null,
     finishedAt: row.finished_at ? String(row.finished_at) : null,

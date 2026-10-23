@@ -71,6 +71,13 @@
       "when": 1792733085970,
       "tag": "0009_climbing_grades",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792733541223,
+      "tag": "0010_climb_style",
+      "breakpoints": true
     }
   ]
 }

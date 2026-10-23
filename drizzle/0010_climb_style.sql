@@ -1,0 +1,1 @@
+ALTER TABLE `workouts` ADD `climb_style` text;

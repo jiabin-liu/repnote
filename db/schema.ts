@@ -10,6 +10,7 @@ export const workouts = sqliteTable("workouts", {
   // Climbing sessions: hardest route tried and hardest route sent, YDS like "5.11D".
   maxAttemptGrade: text("max_attempt_grade"),
   maxSendGrade: text("max_send_grade"),
+  climbStyle: text("climb_style", { enum: ["top_rope", "lead", "boulder"] }),
   unit: text("unit", { enum: ["kg", "lbs"] }).notNull().default("kg"),
   generalNote: text("general_note").notNull().default(""),
   startedAt: text("started_at"),
