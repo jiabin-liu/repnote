@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from "react";
 import { ChartLine, ChevronDown, ChevronsDown, ChevronsUp, MoreHorizontal, Pencil, Plus, Search, Trash2, Trophy, X } from "lucide-react";
 import TrendsScreen from "./TrendsScreen";
+import GradePicker, { DEFAULT_MAX_ATTEMPT_GRADE, DEFAULT_MAX_SEND_GRADE } from "./GradePicker";
 import CustomSelect from "./CustomSelect";
 
 type SetRow = { id: string; weight: string; reps: string; note: string };
@@ -22,6 +23,8 @@ type Activity = "strength" | "cardio" | "climbing" | "ski" | "tennis" | "pickleb
 type Workout = {
   id: string;
   activity?: Activity;
+  maxAttemptGrade?: string | null;
+  maxSendGrade?: string | null;
   status?: "draft" | "completed";
   draftOfWorkoutId?: string | null;
   date: string;
@@ -263,6 +266,8 @@ function RepnoteApp() {
   const [showBuildInfo, setShowBuildInfo] = useState(false);
   const [showWorkoutMenu, setShowWorkoutMenu] = useState(false);
   const [showNewEntryMenu, setShowNewEntryMenu] = useState(false);
+  // Climbing step inside the new-entry sheet (also used to edit an existing climbing session's grades).
+  const [climbForm, setClimbForm] = useState<{ editing: Workout | null; attempt: string; send: string } | null>(null);
   const [backgroundUpdatedAt, setBackgroundUpdatedAt] = useState<string | null>(null);
   const [backgroundSaving, setBackgroundSaving] = useState(false);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
@@ -647,10 +652,11 @@ function RepnoteApp() {
     setDraft({ id: makeId(), status: "draft", draftOfWorkoutId: null, date: localDateKey(), startedAt: new Date().toISOString(), finishedAt: null, unit: "lbs", note: "", exercises: [] });
     openDraftView();
   };
-  const logActivity = async (activity: Exclude<Activity, "strength">) => {
+  const logActivity = async (activity: Exclude<Activity, "strength">, extra: Partial<Workout> = {}) => {
     setShowNewEntryMenu(false);
+    setClimbForm(null);
     const now = new Date().toISOString();
-    const entry: Workout = { id: makeId(), status: "completed", activity, date: localDateKey(), startedAt: now, finishedAt: now, unit: "lbs", note: "", exercises: [] };
+    const entry: Workout = { id: makeId(), status: "completed", activity, date: localDateKey(), startedAt: now, finishedAt: now, unit: "lbs", note: "", exercises: [], ...extra };
     setHistory((items) => [entry, ...items]);
     try {
       const response = await fetch(`${apiBase}/workouts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
@@ -662,6 +668,24 @@ function RepnoteApp() {
       setPermissionError(`${ACTIVITY_LABELS[activity]} could not be logged. Check your connection and try again.`);
     }
   };
+  const saveClimbGrades = async (workout: Workout, attempt: string, send: string) => {
+    setShowNewEntryMenu(false);
+    setClimbForm(null);
+    const updated: Workout = { ...workout, maxAttemptGrade: attempt, maxSendGrade: send };
+    setHistory((items) => items.map((item) => item.id === workout.id ? updated : item));
+    try {
+      const response = await fetch(`${apiBase}/workouts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+      if (!response.ok) throw new Error("Save failed");
+    } catch {
+      setHistory((items) => items.map((item) => item.id === workout.id ? workout : item));
+      setPermissionError("Climbing grades could not be saved. Check your connection and try again.");
+    }
+  };
+  const openClimbEditor = (workout: Workout) => {
+    setClimbForm({ editing: workout, attempt: workout.maxAttemptGrade ?? DEFAULT_MAX_ATTEMPT_GRADE, send: workout.maxSendGrade ?? DEFAULT_MAX_SEND_GRADE });
+    setShowNewEntryMenu(true);
+  };
+  const closeNewEntrySheet = () => { setShowNewEntryMenu(false); setClimbForm(null); };
   const changeBackground = async (file: File | undefined) => {
     if (!file) return;
     setShowWorkoutMenu(false);
@@ -923,7 +947,7 @@ function RepnoteApp() {
 
   const newEntryOptions: { activity: Activity; label: string; hint: string }[] = [
     { activity: "strength", label: draft ? (editingWorkoutId ? "Continue editing" : "Continue lifting") : "Lifting", hint: draft ? "Back to your open workout" : "Log sets, reps and weight" },
-    { activity: "climbing", label: "Climbing", hint: "Mark today as a climbing day" },
+    { activity: "climbing", label: "Climbing", hint: "Log your max attempted & sent grades" },
     { activity: "tennis", label: "Tennis", hint: "Mark today as a tennis day" },
     { activity: "pickleball", label: "Pickleball", hint: "Mark today as a pickleball day" },
     { activity: "cardio", label: "Cardio", hint: "A run, a hike, a swim…" },
@@ -931,6 +955,7 @@ function RepnoteApp() {
   ];
   const chooseNewEntry = (activity: Activity) => {
     setShowNewEntryMenu(false);
+    if (activity === "climbing") { setShowNewEntryMenu(true); setClimbForm({ editing: null, attempt: DEFAULT_MAX_ATTEMPT_GRADE, send: DEFAULT_MAX_SEND_GRADE }); return; }
     if (activity !== "strength") { void logActivity(activity); return; }
     if (workoutDetailOpen) {
       // Leave the day page's history entry in place so "back" from the editor returns to it.
@@ -1012,7 +1037,22 @@ function RepnoteApp() {
 
       {tab === "history" && !workoutDetailOpen && !exerciseLibraryOpen && <button type="button" className="new-workout-fab" aria-label={draft ? "Continue workout or log an activity" : "Log a workout"} aria-haspopup="dialog" onClick={() => setShowNewEntryMenu(true)}>{buttonImageUpdatedAt ? <span className="fab-picture"><img src={`/api/background?slot=button&v=${encodeURIComponent(buttonImageUpdatedAt)}`} alt="" /><i aria-hidden="true"><Plus /></i></span> : <span className="fab-heart"><Plus aria-hidden="true" /></span>}<span className="fab-label">{draft ? "Continue" : "New workout"}</span></button>}
 
-      {showNewEntryMenu && <div className="new-entry-sheet-backdrop" onClick={() => setShowNewEntryMenu(false)}><section className="new-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="new-entry-title" onClick={(event) => event.stopPropagation()}><header><h2 id="new-entry-title">What did you do today? ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={() => setShowNewEntryMenu(false)}><X aria-hidden="true" /></button></header><div className="new-entry-options">{newEntryOptions.map((option) => <button type="button" key={option.activity} className={`new-entry-option activity-${option.activity}`} onClick={() => chooseNewEntry(option.activity)}><i className={`activity-heart activity-${option.activity}`} aria-hidden="true" /><span><b>{option.label}</b><small>{option.hint}</small></span></button>)}</div></section></div>}
+      {showNewEntryMenu && <div className="new-entry-sheet-backdrop" onClick={closeNewEntrySheet}><section className="new-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="new-entry-title" onClick={(event) => event.stopPropagation()}>
+        {climbForm ? <>
+          <header><h2 id="new-entry-title">{climbForm.editing ? "Climbing grades" : "Climbing session"} ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={closeNewEntrySheet}><X aria-hidden="true" /></button></header>
+          <div className="climb-pickers">
+            <GradePicker label="Max attempted" value={climbForm.attempt} onChange={(attempt) => setClimbForm((form) => form && { ...form, attempt })} />
+            <GradePicker label="Max sent" value={climbForm.send} onChange={(send) => setClimbForm((form) => form && { ...form, send })} />
+          </div>
+          <div className="climb-actions">
+            {!climbForm.editing && <button type="button" className="climb-back" onClick={() => setClimbForm(null)}>Back</button>}
+            <button type="button" className="climb-save" onClick={() => climbForm.editing ? void saveClimbGrades(climbForm.editing, climbForm.attempt, climbForm.send) : void logActivity("climbing", { maxAttemptGrade: climbForm.attempt, maxSendGrade: climbForm.send })}>{climbForm.editing ? "Save grades" : "Log climbing"}</button>
+          </div>
+        </> : <>
+          <header><h2 id="new-entry-title">What did you do today? ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={closeNewEntrySheet}><X aria-hidden="true" /></button></header>
+          <div className="new-entry-options">{newEntryOptions.map((option) => <button type="button" key={option.activity} className={`new-entry-option activity-${option.activity}`} onClick={() => chooseNewEntry(option.activity)}><i className={`activity-heart activity-${option.activity}`} aria-hidden="true" /><span><b>{option.label}</b><small>{option.hint}</small></span></button>)}</div>
+        </>}
+      </section></div>}
 
       {exerciseLibraryOpen && <article className="exercise-library-page workout-detail-page"><div className="page-back-gesture" aria-hidden="true" onTouchStart={beginLibraryBackTouch} onTouchMove={moveLibraryBackTouch} onTouchEnd={finishLibraryBackTouch} onTouchCancel={() => { libraryTouchStart.current = null; }} /><div className="detail-page-inner exercise-library-content"><button className="session-back" onClick={closeExerciseLibrary}><span aria-hidden="true">←</span> Back to workouts</button><div className="exercise-library-heading"><div><p className="eyebrow">EXERCISES</p><h2>Exercise library</h2></div><span>{exerciseOptions.length}</span></div>{permissionError && <div className="permission-error" role="alert"><span>{permissionError}</span><button aria-label="Dismiss message" onClick={() => setPermissionError("")}>×</button></div>}<section className="exercise-library-panel"><div className="library-add"><div><input id="exercise-name" aria-label="Exercise name" value={newExercise} onChange={(e) => setNewExercise(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveCustomExercise()} placeholder="Add an exercise" /><button onClick={saveCustomExercise} disabled={!newExercise.trim()}>Add</button></div></div><div className="exercise-library"><div className="library-section"><h4><span>EXERCISE</span><span>TIMES</span><span>FREQUENT</span></h4>{exerciseLibrary.map((item) => <div className="library-row" key={item.id}><strong>{item.name}</strong><span className="exercise-frequency"><b>{item.frequency}</b></span><label className="frequent-check"><input type="checkbox" checked={item.isFrequent} onChange={() => toggleFrequentExercise(item)} aria-label={`Mark ${item.name} as frequent`} /></label></div>)}</div></div></section></div></article>}
 
@@ -1022,13 +1062,14 @@ function RepnoteApp() {
           const fromCalendar = workout.source === "apple-calendar";
           return <section className={`day-entry activity-${activity}`} key={workout.id}>
             <header className="day-entry-header"><span className="day-entry-title"><i className={`activity-dot activity-${activity}`} aria-hidden="true" />{ACTIVITY_LABELS[activity]}{fromCalendar && workout.note && <small>{workout.note}</small>}</span>
-              <span className="day-entry-actions">{activity === "strength" && <button className="edit-workout" aria-label="Edit workout" title="Edit workout" onClick={() => editWorkout(workout)}><Pencil aria-hidden="true" /></button>}{confirmDeleteId === workout.id ? <><button className="day-entry-cancel" onClick={() => setConfirmDeleteId(null)}>Keep</button><button className="day-entry-delete confirm" onClick={() => void deleteWorkout(workout)}>Delete</button></> : <button className="day-entry-delete" aria-label={`Delete ${ACTIVITY_LABELS[activity]}`} title="Delete" onClick={() => setConfirmDeleteId(workout.id)}><Trash2 aria-hidden="true" /></button>}</span>
+              <span className="day-entry-actions">{activity === "strength" && <button className="edit-workout" aria-label="Edit workout" title="Edit workout" onClick={() => editWorkout(workout)}><Pencil aria-hidden="true" /></button>}{activity === "climbing" && <button className="edit-workout" aria-label="Edit climbing grades" title="Edit grades" onClick={() => openClimbEditor(workout)}><Pencil aria-hidden="true" /></button>}{confirmDeleteId === workout.id ? <><button className="day-entry-cancel" onClick={() => setConfirmDeleteId(null)}>Keep</button><button className="day-entry-delete confirm" onClick={() => void deleteWorkout(workout)}>Delete</button></> : <button className="day-entry-delete" aria-label={`Delete ${ACTIVITY_LABELS[activity]}`} title="Delete" onClick={() => setConfirmDeleteId(workout.id)}><Trash2 aria-hidden="true" /></button>}</span>
             </header>
             {activity === "strength" && !fromCalendar && workout.startedAt && workout.finishedAt && <div className="time-strip"><div><span>START</span><strong>{formatClock(workout.startedAt)}</strong></div><i>→</i><div><span>FINISH</span><strong>{formatClock(workout.finishedAt)}</strong></div><div><span>DURATION</span><strong>{duration(workout.startedAt, workout.finishedAt)}</strong></div></div>}
+            {activity === "climbing" && (workout.maxAttemptGrade || workout.maxSendGrade) && <div className="climb-grades"><div><span>Max attempted</span><strong>{workout.maxAttemptGrade ?? "—"}</strong></div><div><span>Max sent</span><strong>{workout.maxSendGrade ?? "—"}</strong></div></div>}
             {!fromCalendar && workout.note && <div className="detail-note"><span>NOTE</span><p>{workout.note}</p></div>}
             {workout.prHighlights?.length ? <p className="day-entry-pr"><b>PR</b> {workout.prHighlights.map((highlight) => `${PR_LIFT_NAMES[highlight.lift]} ${formatPrWeight(highlight.weight)} ${highlight.unit}`).join(" · ")}</p> : null}
             {workout.exercises.length > 0 && <div className="detail-exercises">{workout.exercises.map((exercise) => <section key={exercise.id}><h3>{exercise.name}<span>{exercise.sets.length} {exercise.sets.length === 1 ? "set" : "sets"}</span></h3>{exercise.sets.map((set, index) => <div key={set.id}><b>{index + 1}</b><strong>{set.weight || "—"} <small>{workout.unit ?? "kg"}</small></strong><strong>{set.reps || "—"} <small>reps</small></strong><p>{set.note || ""}</p></div>)}</section>)}</div>}
-            {activity !== "strength" && !workout.note && <p className="day-entry-empty">Logged {ACTIVITY_LABELS[activity].toLowerCase()} this day.</p>}
+            {activity !== "strength" && !workout.note && !(activity === "climbing" && (workout.maxAttemptGrade || workout.maxSendGrade)) && <p className="day-entry-empty">Logged {ACTIVITY_LABELS[activity].toLowerCase()} this day.</p>}
           </section>;
         })}</div></div></article>}
     </main>

@@ -7,6 +7,9 @@ export const workouts = sqliteTable("workouts", {
   status: text("status", { enum: ["draft", "completed"] }).notNull().default("completed"),
   draftOfWorkoutId: text("draft_of_workout_id"),
   activity: text("activity", { enum: ["strength", "cardio", "climbing", "ski", "tennis", "pickleball"] }).notNull().default("strength"),
+  // Climbing sessions: hardest route tried and hardest route sent, YDS like "5.11D".
+  maxAttemptGrade: text("max_attempt_grade"),
+  maxSendGrade: text("max_send_grade"),
   unit: text("unit", { enum: ["kg", "lbs"] }).notNull().default("kg"),
   generalNote: text("general_note").notNull().default(""),
   startedAt: text("started_at"),

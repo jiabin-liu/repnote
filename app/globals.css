@@ -563,3 +563,26 @@ html.detail-open .app-scroll,html.library-open .app-scroll,html.detail-open .top
 .trend-tip text { fill:var(--ink); font:700 11px var(--font-sans); }
 .trend-card.empty header { margin-bottom:0; }
 .trend-empty { margin:6px 4px 8px; color:var(--muted); font-size:12px; }
+
+/* Climbing grade wheels */
+.climb-pickers { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.grade-picker { padding:12px 10px 10px; border:1px solid #f5dde9; border-radius:20px; background:#fff; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.grade-picker-label { color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.grade-picker-wheels { position:relative; display:flex; align-items:center; gap:2px; height:132px; }
+.grade-prefix { color:var(--ink); font:500 26px var(--font-serif); margin-right:2px; }
+.grade-wheel { position:relative; z-index:1; width:52px; height:132px; overflow-y:auto; scroll-snap-type:y mandatory; padding:44px 0; scrollbar-width:none; -webkit-mask:linear-gradient(transparent,#000 30%,#000 70%,transparent); mask:linear-gradient(transparent,#000 30%,#000 70%,transparent); outline:none; overscroll-behavior:contain; }
+.grade-wheel::-webkit-scrollbar { display:none; }
+.grade-wheel-item { height:44px; display:grid; place-items:center; scroll-snap-align:center; color:#b9a9bb; font:500 22px var(--font-serif); cursor:pointer; user-select:none; transition:color .12s, transform .12s; }
+.grade-wheel-item.selected { color:var(--ink); font-size:28px; }
+.grade-wheel:focus-visible { box-shadow:0 0 0 2px #f2a3bf; border-radius:12px; }
+.grade-picker-band { position:absolute; left:-4px; right:-4px; top:44px; height:44px; border-radius:14px; background:linear-gradient(90deg,#ffe3ee,#efe6ff); pointer-events:none; }
+.grade-picker-value { color:#d76b97; font:600 14px var(--font-serif); letter-spacing:.02em; }
+.climb-actions { display:flex; gap:10px; margin-top:14px; }
+.climb-back,.climb-save { height:48px; border:0; border-radius:16px; font:600 15px var(--font-serif); }
+.climb-back { flex:0 0 96px; background:#fde8f1; color:#c8749a; }
+.climb-save { flex:1; background:linear-gradient(135deg,#f6a9c4,#c4b0ef); color:#fff; box-shadow:0 8px 18px rgba(240,150,190,.3); }
+.climb-grades { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:4px 0 6px; }
+.climb-grades div { padding:10px 12px; border-radius:14px; background:rgba(255,232,241,.6); }
+.climb-grades span { display:block; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.climb-grades strong { display:block; color:var(--ink); font:500 24px/1.2 var(--font-serif); }
+.grade-prefix { position:relative; z-index:2; }
