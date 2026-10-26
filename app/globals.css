@@ -591,3 +591,13 @@ html.detail-open .app-scroll,html.library-open .app-scroll,html.detail-open .top
 .climb-style button { height:40px; border:0; border-radius:12px; background:transparent; color:#b07a96; font:600 14px var(--font-serif); transition:background .15s, color .15s, box-shadow .15s; }
 .climb-style button.active { background:#fff; color:var(--ink); box-shadow:0 4px 10px rgba(230,150,190,.25); }
 .day-entry-title small.climb-style-tag { padding:2px 8px; border-radius:999px; background:#ffe3ee; color:#c06e92; font-weight:700; }
+/* Choosing which day to log */
+.entry-date-row { display:flex; gap:8px; margin:-4px 0 14px; }
+.entry-date-row>button,.entry-date-pick { height:36px; padding:0 14px; border:1px solid #f3d6e4; border-radius:999px; background:#fff; color:#b07a96; display:inline-flex; align-items:center; gap:6px; font:600 13px var(--font-serif); white-space:nowrap; }
+.entry-date-row>button.active,.entry-date-pick.active { border-color:transparent; background:linear-gradient(135deg,#f9b3cb,#c9b6f2); color:#fff; box-shadow:0 4px 10px rgba(236,140,180,.25); }
+.entry-date-pick { position:relative; overflow:hidden; cursor:pointer; }
+.entry-date-pick svg,.session-date svg { width:15px; height:15px; stroke-width:2; flex:none; }
+.entry-date-pick input,.session-date input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:0; }
+.entry-date-pick input::-webkit-calendar-picker-indicator,.session-date input::-webkit-calendar-picker-indicator { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
+.new-entry-sheet h2 .sheet-date { display:block; margin-top:2px; color:#c8749a; font:600 13px var(--font-sans); }
+.session-date { position:relative; display:inline-flex; align-items:center; gap:6px; margin:2px 0 4px; padding:5px 12px; border-radius:999px; background:rgba(255,227,238,.8); color:#c06e92; font:600 13px var(--font-serif); cursor:pointer; overflow:hidden; }

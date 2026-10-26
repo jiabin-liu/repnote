@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/refs, @next/next/no-img-element -- Native History uses refs; the tiny local SVG favicon needs no image optimizer. */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from "react";
-import { ChartLine, ChevronDown, ChevronsDown, ChevronsUp, MoreHorizontal, Pencil, Plus, Search, Trash2, Trophy, X } from "lucide-react";
+import { CalendarDays, ChartLine, ChevronDown, ChevronsDown, ChevronsUp, MoreHorizontal, Pencil, Plus, Search, Trash2, Trophy, X } from "lucide-react";
 import TrendsScreen from "./TrendsScreen";
 import GradePicker, { CLIMB_STYLES, climbStyleLabel, DEFAULT_CLIMB_STYLE, DEFAULT_MAX_ATTEMPT_GRADE, DEFAULT_MAX_SEND_GRADE, type ClimbStyle } from "./GradePicker";
 import CustomSelect from "./CustomSelect";
@@ -133,6 +133,8 @@ type LiftBest = { kg: number; reps: number | null; date: string };
 const ACTIVITY_MONTHS = 3;
 const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"];
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const formatEntryDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00`));
+const shiftDateKey = (date: string, days: number) => { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + days); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const localDateKey = () => new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const dateFromWorkout = (workout: Workout) => new Date(`${workout.date}T12:00:00`);
 const duration = (start: string, end?: string) => {
@@ -268,6 +270,8 @@ function RepnoteApp() {
   const [showWorkoutMenu, setShowWorkoutMenu] = useState(false);
   const [showNewEntryMenu, setShowNewEntryMenu] = useState(false);
   // Climbing step inside the new-entry sheet (also used to edit an existing climbing session's grades).
+  // Day the new entry is for (today by default; can be changed to log a past day).
+  const [entryDate, setEntryDate] = useState(() => localDateKey());
   const [climbForm, setClimbForm] = useState<{ editing: Workout | null; style: ClimbStyle; attempt: string; send: string } | null>(null);
   const [backgroundUpdatedAt, setBackgroundUpdatedAt] = useState<string | null>(null);
   const [backgroundSaving, setBackgroundSaving] = useState(false);
@@ -647,17 +651,17 @@ function RepnoteApp() {
     return new Set([...current, ...visibleMonthKeys]);
   });
 
-  const startWorkout = () => {
+  const startWorkout = (date = localDateKey()) => {
     setEditingWorkoutId(null);
     setDraftSyncStatus("idle");
-    setDraft({ id: makeId(), status: "draft", draftOfWorkoutId: null, date: localDateKey(), startedAt: new Date().toISOString(), finishedAt: null, unit: "lbs", note: "", exercises: [] });
+    setDraft({ id: makeId(), status: "draft", draftOfWorkoutId: null, date, startedAt: new Date().toISOString(), finishedAt: null, unit: "lbs", note: "", exercises: [] });
     openDraftView();
   };
   const logActivity = async (activity: Exclude<Activity, "strength">, extra: Partial<Workout> = {}) => {
     setShowNewEntryMenu(false);
     setClimbForm(null);
     const now = new Date().toISOString();
-    const entry: Workout = { id: makeId(), status: "completed", activity, date: localDateKey(), startedAt: now, finishedAt: now, unit: "lbs", note: "", exercises: [], ...extra };
+    const entry: Workout = { id: makeId(), status: "completed", activity, date: entryDate, startedAt: now, finishedAt: now, unit: "lbs", note: "", exercises: [], ...extra };
     setHistory((items) => [entry, ...items]);
     try {
       const response = await fetch(`${apiBase}/workouts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
@@ -684,6 +688,11 @@ function RepnoteApp() {
   };
   const openClimbEditor = (workout: Workout) => {
     setClimbForm({ editing: workout, style: (workout.climbStyle as ClimbStyle | null | undefined) ?? DEFAULT_CLIMB_STYLE, attempt: workout.maxAttemptGrade ?? DEFAULT_MAX_ATTEMPT_GRADE, send: workout.maxSendGrade ?? DEFAULT_MAX_SEND_GRADE });
+    setShowNewEntryMenu(true);
+  };
+  const openNewEntry = (date?: string) => {
+    setEntryDate(date && date <= localDateKey() ? date : localDateKey());
+    setClimbForm(null);
     setShowNewEntryMenu(true);
   };
   const closeNewEntrySheet = () => { setShowNewEntryMenu(false); setClimbForm(null); };
@@ -935,7 +944,7 @@ function RepnoteApp() {
         <div className="training-card-filter"><span>Filter</span><CustomSelect className="exercise-filter" ariaLabel="Filter workouts by exercise" value={exerciseFilter} onChange={setExerciseFilter} options={[{ value: "", label: "All exercises" }, ...exerciseFilterOptions.map((name) => ({ value: name, label: name }))]} /><div className="history-controls"><button type="button" className="collapse-all" aria-label={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} title={allMonthsCollapsed ? "Expand all months" : "Collapse all months"} aria-pressed={allMonthsCollapsed} onClick={toggleAllMonths}>{allMonthsCollapsed ? <ChevronsDown aria-hidden="true" /> : <ChevronsUp aria-hidden="true" />}</button></div></div>
       </section>
       {history.length === 0 ? <div className="empty-state"><b>No workouts yet</b><p>Create your first workout with the + button above.</p></div> : filteredHistory.length === 0 ? <div className="empty-state filter-empty"><b>No matching workouts</b><p>No workouts contain {exerciseFilter}.</p><button onClick={() => setExerciseFilter("")}>Clear filter</button></div> : Object.entries(grouped).map(([year, months]) => (
-        <section className="calendar-year compact-calendar-year" key={year}>{Object.entries(months).map(([month, items]) => <CalendarMonth key={month} year={Number.parseInt(year, 10)} month={Number.parseInt(month, 10)} workouts={items} collapsed={collapsedMonths.has(`${year}/${month}`)} onToggle={() => toggleMonth(`${year}/${month}`)} onOpen={openDayDetail} onAddToday={() => setShowNewEntryMenu(true)} todayKey={localDateKey()} />)}</section>
+        <section className="calendar-year compact-calendar-year" key={year}>{Object.entries(months).map(([month, items]) => <CalendarMonth key={month} year={Number.parseInt(year, 10)} month={Number.parseInt(month, 10)} workouts={items} collapsed={collapsedMonths.has(`${year}/${month}`)} onToggle={() => toggleMonth(`${year}/${month}`)} onOpen={openDayDetail} onAddToday={() => openNewEntry()} todayKey={localDateKey()} />)}</section>
       ))}
     </div>
   );
@@ -949,10 +958,10 @@ function RepnoteApp() {
   const newEntryOptions: { activity: Activity; label: string; hint: string }[] = [
     { activity: "strength", label: draft ? (editingWorkoutId ? "Continue editing" : "Continue lifting") : "Lifting", hint: draft ? "Back to your open workout" : "Log sets, reps and weight" },
     { activity: "climbing", label: "Climbing", hint: "Log your max attempted & sent grades" },
-    { activity: "tennis", label: "Tennis", hint: "Mark today as a tennis day" },
-    { activity: "pickleball", label: "Pickleball", hint: "Mark today as a pickleball day" },
+    { activity: "tennis", label: "Tennis", hint: "Mark it as a tennis day" },
+    { activity: "pickleball", label: "Pickleball", hint: "Mark it as a pickleball day" },
     { activity: "cardio", label: "Cardio", hint: "A run, a hike, a swim…" },
-    { activity: "ski", label: "Ski", hint: "Mark today as a ski day" },
+    { activity: "ski", label: "Ski", hint: "Mark it as a ski day" },
   ];
   const chooseNewEntry = (activity: Activity) => {
     setShowNewEntryMenu(false);
@@ -964,7 +973,7 @@ function RepnoteApp() {
       document.documentElement.classList.remove("detail-open");
       setWorkoutDetailOpen(false);
     }
-    if (draft) openDraftView(); else startWorkout();
+    if (draft) openDraftView(); else startWorkout(entryDate);
   };
 
   return (
@@ -994,7 +1003,7 @@ function RepnoteApp() {
             </div>
           ) : (
             <div className="workout-screen">
-              <div className="session-heading"><div><button className="session-back" onClick={returnToHistory}><span aria-hidden="true">←</span> Back to workouts</button><h2>{editingWorkoutId ? "Edit workout" : "New workout"}</h2></div><button className="finish-button" disabled={finishingWorkout} onClick={() => void finishWorkout()}>{finishingWorkout ? "Saving…" : editingWorkoutId ? "Save changes" : "Finish workout"}</button></div>
+              <div className="session-heading"><div><button className="session-back" onClick={returnToHistory}><span aria-hidden="true">←</span> Back to workouts</button><h2>{editingWorkoutId ? "Edit workout" : "New workout"}</h2><label className="session-date"><CalendarDays aria-hidden="true" /><span>{draft.date === localDateKey() ? "Today" : formatEntryDate(draft.date)}</span><input type="date" aria-label="Workout date" value={draft.date} max={localDateKey()} onChange={(event) => { if (event.target.value) setDraft({ ...draft, date: event.target.value > localDateKey() ? localDateKey() : event.target.value }); }} /></label></div><button className="finish-button" disabled={finishingWorkout} onClick={() => void finishWorkout()}>{finishingWorkout ? "Saving…" : editingWorkoutId ? "Save changes" : "Finish workout"}</button></div>
               {draftSyncStatus === "error" && <div className="draft-sync-error" role="alert">Draft sync is offline. Keep this page open and try again when your connection returns.</div>}
               <label className="note-card"><span>Notes</span><textarea aria-label="Workout notes" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} /></label>
               <section className="session-unit-picker" aria-label="Weight unit"><div className={`weight-unit-toggle ${(draft.unit ?? "lbs") === "lbs" ? "lbs" : "kg"}`} role="group" aria-label="Weight unit"><span className="weight-unit-thumb" aria-hidden="true" /><button type="button" aria-pressed={(draft.unit ?? "lbs") === "lbs"} onClick={() => setDraft({ ...draft, unit: "lbs" })}>LBS</button><button type="button" aria-pressed={(draft.unit ?? "lbs") === "kg"} onClick={() => setDraft({ ...draft, unit: "kg" })}>KG</button></div></section>
@@ -1036,11 +1045,11 @@ function RepnoteApp() {
         <button className={tab === "trends" ? "active" : ""} onClick={() => openMainTab("trends")}><ChartLine aria-hidden="true" />Trends</button>
       </nav>
 
-      {tab === "history" && !workoutDetailOpen && !exerciseLibraryOpen && <button type="button" className="new-workout-fab" aria-label={draft ? "Continue workout or log an activity" : "Log a workout"} aria-haspopup="dialog" onClick={() => setShowNewEntryMenu(true)}>{buttonImageUpdatedAt ? <span className="fab-picture"><img src={`/api/background?slot=button&v=${encodeURIComponent(buttonImageUpdatedAt)}`} alt="" /><i aria-hidden="true"><Plus /></i></span> : <span className="fab-heart"><Plus aria-hidden="true" /></span>}<span className="fab-label">{draft ? "Continue" : "New workout"}</span></button>}
+      {tab === "history" && !workoutDetailOpen && !exerciseLibraryOpen && <button type="button" className="new-workout-fab" aria-label={draft ? "Continue workout or log an activity" : "Log a workout"} aria-haspopup="dialog" onClick={() => openNewEntry()}>{buttonImageUpdatedAt ? <span className="fab-picture"><img src={`/api/background?slot=button&v=${encodeURIComponent(buttonImageUpdatedAt)}`} alt="" /><i aria-hidden="true"><Plus /></i></span> : <span className="fab-heart"><Plus aria-hidden="true" /></span>}<span className="fab-label">{draft ? "Continue" : "New workout"}</span></button>}
 
       {showNewEntryMenu && <div className="new-entry-sheet-backdrop" onClick={closeNewEntrySheet}><section className="new-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="new-entry-title" onClick={(event) => event.stopPropagation()}>
         {climbForm ? <>
-          <header><h2 id="new-entry-title">{climbForm.editing ? "Edit climbing session" : "Climbing session"} ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={closeNewEntrySheet}><X aria-hidden="true" /></button></header>
+          <header><h2 id="new-entry-title">{climbForm.editing ? "Edit climbing session" : "Climbing session"} ♡{!climbForm.editing && entryDate !== localDateKey() && <small className="sheet-date">{formatEntryDate(entryDate)}</small>}</h2><button type="button" className="sheet-close" aria-label="Close" onClick={closeNewEntrySheet}><X aria-hidden="true" /></button></header>
           <div className="climb-style" role="radiogroup" aria-label="Climbing style">{CLIMB_STYLES.map((option) => <button type="button" role="radio" key={option.value} aria-checked={climbForm.style === option.value} className={climbForm.style === option.value ? "active" : ""} onClick={() => setClimbForm((form) => form && { ...form, style: option.value })}>{option.label}</button>)}</div>
           <div className="climb-pickers">
             <GradePicker label="Max attempted" value={climbForm.attempt} onChange={(attempt) => setClimbForm((form) => form && { ...form, attempt })} />
@@ -1051,14 +1060,19 @@ function RepnoteApp() {
             <button type="button" className="climb-save" onClick={() => climbForm.editing ? void saveClimbGrades(climbForm.editing, climbForm.style, climbForm.attempt, climbForm.send) : void logActivity("climbing", { climbStyle: climbForm.style, maxAttemptGrade: climbForm.attempt, maxSendGrade: climbForm.send })}>{climbForm.editing ? "Save" : "Log climbing"}</button>
           </div>
         </> : <>
-          <header><h2 id="new-entry-title">What did you do today? ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={closeNewEntrySheet}><X aria-hidden="true" /></button></header>
+          <header><h2 id="new-entry-title">{entryDate === localDateKey() ? "What did you do today?" : "What did you do?"} ♡</h2><button type="button" className="sheet-close" aria-label="Close" onClick={closeNewEntrySheet}><X aria-hidden="true" /></button></header>
+          <div className="entry-date-row" role="group" aria-label="Day to log">
+            <button type="button" className={entryDate === localDateKey() ? "active" : ""} onClick={() => setEntryDate(localDateKey())}>Today</button>
+            <button type="button" className={entryDate === shiftDateKey(localDateKey(), -1) ? "active" : ""} onClick={() => setEntryDate(shiftDateKey(localDateKey(), -1))}>Yesterday</button>
+            <label className={`entry-date-pick${entryDate < shiftDateKey(localDateKey(), -1) ? " active" : ""}`}><CalendarDays aria-hidden="true" /><span>{entryDate < shiftDateKey(localDateKey(), -1) ? formatEntryDate(entryDate) : "Pick a date"}</span><input type="date" aria-label="Pick a date" value={entryDate} max={localDateKey()} onChange={(event) => { if (event.target.value) setEntryDate(event.target.value > localDateKey() ? localDateKey() : event.target.value); }} /></label>
+          </div>
           <div className="new-entry-options">{newEntryOptions.map((option) => <button type="button" key={option.activity} className={`new-entry-option activity-${option.activity}`} onClick={() => chooseNewEntry(option.activity)}><i className={`activity-heart activity-${option.activity}`} aria-hidden="true" /><span><b>{option.label}</b><small>{option.hint}</small></span></button>)}</div>
         </>}
       </section></div>}
 
       {exerciseLibraryOpen && <article className="exercise-library-page workout-detail-page"><div className="page-back-gesture" aria-hidden="true" onTouchStart={beginLibraryBackTouch} onTouchMove={moveLibraryBackTouch} onTouchEnd={finishLibraryBackTouch} onTouchCancel={() => { libraryTouchStart.current = null; }} /><div className="detail-page-inner exercise-library-content"><button className="session-back" onClick={closeExerciseLibrary}><span aria-hidden="true">←</span> Back to workouts</button><div className="exercise-library-heading"><div><p className="eyebrow">EXERCISES</p><h2>Exercise library</h2></div><span>{exerciseOptions.length}</span></div>{permissionError && <div className="permission-error" role="alert"><span>{permissionError}</span><button aria-label="Dismiss message" onClick={() => setPermissionError("")}>×</button></div>}<section className="exercise-library-panel"><div className="library-add"><div><input id="exercise-name" aria-label="Exercise name" value={newExercise} onChange={(e) => setNewExercise(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveCustomExercise()} placeholder="Add an exercise" /><button onClick={saveCustomExercise} disabled={!newExercise.trim()}>Add</button></div></div><div className="exercise-library"><div className="library-section"><h4><span>EXERCISE</span><span>TIMES</span><span>FREQUENT</span></h4>{exerciseLibrary.map((item) => <div className="library-row" key={item.id}><strong>{item.name}</strong><span className="exercise-frequency"><b>{item.frequency}</b></span><label className="frequent-check"><input type="checkbox" checked={item.isFrequent} onChange={() => toggleFrequentExercise(item)} aria-label={`Mark ${item.name} as frequent`} /></label></div>)}</div></div></section></div></article>}
 
-      {workoutDetailOpen && selectedDayWorkouts.length > 0 && <article className="workout-detail-page"><div className="detail-page-inner"><button className="session-back" onClick={closeWorkoutDetail}><span aria-hidden="true">←</span> Back to workouts</button><div className="detail-heading"><h2>{formatDate(`${selectedDayWorkouts[0].date}T12:00:00`)}</h2>{selectedDayWorkouts[0].date === localDateKey() && <button type="button" className="day-add" onClick={() => setShowNewEntryMenu(true)}><Plus aria-hidden="true" />Add</button>}</div>
+      {workoutDetailOpen && selectedDayWorkouts.length > 0 && <article className="workout-detail-page"><div className="detail-page-inner"><button className="session-back" onClick={closeWorkoutDetail}><span aria-hidden="true">←</span> Back to workouts</button><div className="detail-heading"><h2>{formatDate(`${selectedDayWorkouts[0].date}T12:00:00`)}</h2>{<button type="button" className="day-add" onClick={() => openNewEntry(selectedDayWorkouts[0].date)}><Plus aria-hidden="true" />Add</button>}</div>
         <div className="day-entries">{selectedDayWorkouts.map((workout) => {
           const activity = activityOf(workout);
           const fromCalendar = workout.source === "apple-calendar";
