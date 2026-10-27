@@ -601,3 +601,19 @@ html.detail-open .app-scroll,html.library-open .app-scroll,html.detail-open .top
 .entry-date-pick input::-webkit-calendar-picker-indicator,.session-date input::-webkit-calendar-picker-indicator { position:absolute; inset:0; width:100%; height:100%; cursor:pointer; }
 .new-entry-sheet h2 .sheet-date { display:block; margin-top:2px; color:#c8749a; font:600 13px var(--font-sans); }
 .session-date { position:relative; display:inline-flex; align-items:center; gap:6px; margin:2px 0 4px; padding:5px 12px; border-radius:999px; background:rgba(255,227,238,.8); color:#c06e92; font:600 13px var(--font-serif); cursor:pointer; overflow:hidden; }
+/* Optional comment on any session */
+.entry-comment { margin:-4px 0 12px; }
+.entry-comment-toggle { border:0; background:none; padding:4px 2px; color:#c8749a; font:600 13px var(--font-serif); }
+.entry-comment-toggle small { color:var(--muted); font:500 11px var(--font-sans); }
+.entry-comment textarea,.day-comment textarea { width:100%; min-height:72px; padding:10px 12px; border:1px solid #f3d6e4; border-radius:16px; background:#fff; color:var(--ink); font:500 14px/1.45 var(--font-sans); resize:vertical; outline:none; }
+.entry-comment textarea:focus,.day-comment textarea:focus { border-color:#eea6c4; box-shadow:0 0 0 3px rgba(242,163,191,.2); }
+.climb-pickers + .entry-comment { margin:12px 0 0; }
+.day-comment { display:block; width:100%; margin:6px 0 4px; padding:10px 12px; border:0; border-left:3px solid #f4a6c0; border-radius:0 14px 14px 0; background:rgba(255,240,246,.7); text-align:left; cursor:pointer; }
+.day-comment span { display:block; color:var(--muted); font-size:9px; font-weight:700; letter-spacing:.08em; }
+.day-comment p { margin:3px 0 0; color:var(--ink); font:500 14px/1.45 var(--font-sans); white-space:pre-wrap; }
+.day-comment.editing { cursor:default; padding:8px; }
+.day-comment-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+.day-comment-actions button { height:34px; padding:0 14px; border:1px solid #f3d6e4; border-radius:999px; background:#fff; color:#b07a96; font:600 13px var(--font-serif); }
+.day-comment-actions button.save { border-color:transparent; background:linear-gradient(135deg,#f6a9c4,#c4b0ef); color:#fff; }
+.day-comment-add { margin:4px 0 2px; padding:4px 0; border:0; background:none; color:#c8749a; font:600 13px var(--font-serif); }
+.has-photo-background .day-comment { background:rgba(255,240,246,.5); }

@@ -13,6 +13,8 @@ export const workouts = sqliteTable("workouts", {
   climbStyle: text("climb_style", { enum: ["top_rope", "lead", "boulder"] }),
   unit: text("unit", { enum: ["kg", "lbs"] }).notNull().default("kg"),
   generalNote: text("general_note").notNull().default(""),
+  // How the session felt, in the owner's words (optional, any activity). general_note keeps calendar-import titles.
+  comment: text("comment").notNull().default(""),
   startedAt: text("started_at"),
   finishedAt: text("finished_at"),
   source: text("source").notNull().default("manual"),

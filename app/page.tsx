@@ -26,6 +26,7 @@ type Workout = {
   maxAttemptGrade?: string | null;
   maxSendGrade?: string | null;
   climbStyle?: string | null;
+  comment?: string;
   status?: "draft" | "completed";
   draftOfWorkoutId?: string | null;
   date: string;
@@ -272,6 +273,9 @@ function RepnoteApp() {
   // Climbing step inside the new-entry sheet (also used to edit an existing climbing session's grades).
   // Day the new entry is for (today by default; can be changed to log a past day).
   const [entryDate, setEntryDate] = useState(() => localDateKey());
+  const [entryComment, setEntryComment] = useState("");
+  const [showEntryComment, setShowEntryComment] = useState(false);
+  const [commentEdit, setCommentEdit] = useState<{ id: string; text: string } | null>(null);
   const [climbForm, setClimbForm] = useState<{ editing: Workout | null; style: ClimbStyle; attempt: string; send: string } | null>(null);
   const [backgroundUpdatedAt, setBackgroundUpdatedAt] = useState<string | null>(null);
   const [backgroundSaving, setBackgroundSaving] = useState(false);
@@ -651,17 +655,17 @@ function RepnoteApp() {
     return new Set([...current, ...visibleMonthKeys]);
   });
 
-  const startWorkout = (date = localDateKey()) => {
+  const startWorkout = (date = localDateKey(), comment = "") => {
     setEditingWorkoutId(null);
     setDraftSyncStatus("idle");
-    setDraft({ id: makeId(), status: "draft", draftOfWorkoutId: null, date, startedAt: new Date().toISOString(), finishedAt: null, unit: "lbs", note: "", exercises: [] });
+    setDraft({ id: makeId(), status: "draft", draftOfWorkoutId: null, date, comment, startedAt: new Date().toISOString(), finishedAt: null, unit: "lbs", note: "", exercises: [] });
     openDraftView();
   };
   const logActivity = async (activity: Exclude<Activity, "strength">, extra: Partial<Workout> = {}) => {
     setShowNewEntryMenu(false);
     setClimbForm(null);
     const now = new Date().toISOString();
-    const entry: Workout = { id: makeId(), status: "completed", activity, date: entryDate, startedAt: now, finishedAt: now, unit: "lbs", note: "", exercises: [], ...extra };
+    const entry: Workout = { id: makeId(), status: "completed", activity, date: entryDate, startedAt: now, finishedAt: now, unit: "lbs", note: "", comment: entryComment.trim(), exercises: [], ...extra };
     setHistory((items) => [entry, ...items]);
     try {
       const response = await fetch(`${apiBase}/workouts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
@@ -686,12 +690,26 @@ function RepnoteApp() {
       setPermissionError("Climbing grades could not be saved. Check your connection and try again.");
     }
   };
+  const saveComment = async (workout: Workout, text: string) => {
+    setCommentEdit(null);
+    const updated: Workout = { ...workout, comment: text.trim() };
+    setHistory((items) => items.map((item) => item.id === workout.id ? updated : item));
+    try {
+      const response = await fetch(`${apiBase}/workouts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+      if (!response.ok) throw new Error("Save failed");
+    } catch {
+      setHistory((items) => items.map((item) => item.id === workout.id ? workout : item));
+      setPermissionError("Comment could not be saved. Check your connection and try again.");
+    }
+  };
   const openClimbEditor = (workout: Workout) => {
     setClimbForm({ editing: workout, style: (workout.climbStyle as ClimbStyle | null | undefined) ?? DEFAULT_CLIMB_STYLE, attempt: workout.maxAttemptGrade ?? DEFAULT_MAX_ATTEMPT_GRADE, send: workout.maxSendGrade ?? DEFAULT_MAX_SEND_GRADE });
     setShowNewEntryMenu(true);
   };
   const openNewEntry = (date?: string) => {
     setEntryDate(date && date <= localDateKey() ? date : localDateKey());
+    setEntryComment("");
+    setShowEntryComment(false);
     setClimbForm(null);
     setShowNewEntryMenu(true);
   };
@@ -973,7 +991,7 @@ function RepnoteApp() {
       document.documentElement.classList.remove("detail-open");
       setWorkoutDetailOpen(false);
     }
-    if (draft) openDraftView(); else startWorkout(entryDate);
+    if (draft) openDraftView(); else startWorkout(entryDate, entryComment.trim());
   };
 
   return (
@@ -1005,7 +1023,7 @@ function RepnoteApp() {
             <div className="workout-screen">
               <div className="session-heading"><div><button className="session-back" onClick={returnToHistory}><span aria-hidden="true">←</span> Back to workouts</button><h2>{editingWorkoutId ? "Edit workout" : "New workout"}</h2><label className="session-date"><CalendarDays aria-hidden="true" /><span>{draft.date === localDateKey() ? "Today" : formatEntryDate(draft.date)}</span><input type="date" aria-label="Workout date" value={draft.date} max={localDateKey()} onChange={(event) => { if (event.target.value) setDraft({ ...draft, date: event.target.value > localDateKey() ? localDateKey() : event.target.value }); }} /></label></div><button className="finish-button" disabled={finishingWorkout} onClick={() => void finishWorkout()}>{finishingWorkout ? "Saving…" : editingWorkoutId ? "Save changes" : "Finish workout"}</button></div>
               {draftSyncStatus === "error" && <div className="draft-sync-error" role="alert">Draft sync is offline. Keep this page open and try again when your connection returns.</div>}
-              <label className="note-card"><span>Notes</span><textarea aria-label="Workout notes" value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} /></label>
+              <label className="note-card"><span>Comment</span><textarea aria-label="Workout comment" placeholder="How did it feel? (optional)" value={draft.comment ?? draft.note ?? ""} onChange={(e) => setDraft({ ...draft, comment: e.target.value, note: "" })} /></label>
               <section className="session-unit-picker" aria-label="Weight unit"><div className={`weight-unit-toggle ${(draft.unit ?? "lbs") === "lbs" ? "lbs" : "kg"}`} role="group" aria-label="Weight unit"><span className="weight-unit-thumb" aria-hidden="true" /><button type="button" aria-pressed={(draft.unit ?? "lbs") === "lbs"} onClick={() => setDraft({ ...draft, unit: "lbs" })}>LBS</button><button type="button" aria-pressed={(draft.unit ?? "lbs") === "kg"} onClick={() => setDraft({ ...draft, unit: "kg" })}>KG</button></div></section>
 
               <div className="quick-add"><div className="quick-add-options">{frequentExercises.map((item) => <button key={item.id} disabled={draft.exercises.some((ex) => ex.name === item.name)} onClick={() => addExercise(item.name)}>＋ {item.name}</button>)}<button className="rare-exercise-toggle" aria-expanded={showRareExercises} onClick={() => { setRareExercise(""); setShowRareExercises((value) => !value); }}><span>More exercises</span><ChevronDown aria-hidden="true" /></button></div>{showRareExercises && <ExerciseSearchPicker options={exerciseLibrary.filter((item) => !draft.exercises.some((exercise) => exercise.name === item.name))} query={rareExercise} onQueryChange={setRareExercise} onChoose={(name) => { addExercise(name); setRareExercise(""); setShowRareExercises(false); }} canCreate={isNewExerciseName} onCreate={(name) => { if (createLibraryExercise(name)) addExercise(name); setRareExercise(""); setShowRareExercises(false); }} />}</div>
@@ -1055,6 +1073,7 @@ function RepnoteApp() {
             <GradePicker label="Max attempted" value={climbForm.attempt} onChange={(attempt) => setClimbForm((form) => form && { ...form, attempt })} />
             <GradePicker label="Max sent" value={climbForm.send} onChange={(send) => setClimbForm((form) => form && { ...form, send })} />
           </div>
+          {!climbForm.editing && <div className="entry-comment">{showEntryComment || entryComment ? <textarea autoFocus={!entryComment} aria-label="Comment" placeholder="How did it feel? (optional)" maxLength={2000} value={entryComment} onChange={(event) => setEntryComment(event.target.value)} /> : <button type="button" className="entry-comment-toggle" onClick={() => setShowEntryComment(true)}>♡ Add a comment <small>(optional)</small></button>}</div>}
           <div className="climb-actions">
             {!climbForm.editing && <button type="button" className="climb-back" onClick={() => setClimbForm(null)}>Back</button>}
             <button type="button" className="climb-save" onClick={() => climbForm.editing ? void saveClimbGrades(climbForm.editing, climbForm.style, climbForm.attempt, climbForm.send) : void logActivity("climbing", { climbStyle: climbForm.style, maxAttemptGrade: climbForm.attempt, maxSendGrade: climbForm.send })}>{climbForm.editing ? "Save" : "Log climbing"}</button>
@@ -1066,6 +1085,7 @@ function RepnoteApp() {
             <button type="button" className={entryDate === shiftDateKey(localDateKey(), -1) ? "active" : ""} onClick={() => setEntryDate(shiftDateKey(localDateKey(), -1))}>Yesterday</button>
             <label className={`entry-date-pick${entryDate < shiftDateKey(localDateKey(), -1) ? " active" : ""}`}><CalendarDays aria-hidden="true" /><span>{entryDate < shiftDateKey(localDateKey(), -1) ? formatEntryDate(entryDate) : "Pick a date"}</span><input type="date" aria-label="Pick a date" value={entryDate} max={localDateKey()} onChange={(event) => { if (event.target.value) setEntryDate(event.target.value > localDateKey() ? localDateKey() : event.target.value); }} /></label>
           </div>
+          <div className="entry-comment">{showEntryComment || entryComment ? <textarea autoFocus={!entryComment} aria-label="Comment" placeholder="How did it feel? (optional)" maxLength={2000} value={entryComment} onChange={(event) => setEntryComment(event.target.value)} /> : <button type="button" className="entry-comment-toggle" onClick={() => setShowEntryComment(true)}>♡ Add a comment <small>(optional)</small></button>}</div>
           <div className="new-entry-options">{newEntryOptions.map((option) => <button type="button" key={option.activity} className={`new-entry-option activity-${option.activity}`} onClick={() => chooseNewEntry(option.activity)}><i className={`activity-heart activity-${option.activity}`} aria-hidden="true" /><span><b>{option.label}</b><small>{option.hint}</small></span></button>)}</div>
         </>}
       </section></div>}
@@ -1082,10 +1102,12 @@ function RepnoteApp() {
             </header>
             {activity === "strength" && !fromCalendar && workout.startedAt && workout.finishedAt && <div className="time-strip"><div><span>START</span><strong>{formatClock(workout.startedAt)}</strong></div><i>→</i><div><span>FINISH</span><strong>{formatClock(workout.finishedAt)}</strong></div><div><span>DURATION</span><strong>{duration(workout.startedAt, workout.finishedAt)}</strong></div></div>}
             {activity === "climbing" && (workout.maxAttemptGrade || workout.maxSendGrade) && <div className="climb-grades"><div><span>Max attempted</span><strong>{workout.maxAttemptGrade ?? "—"}</strong></div><div><span>Max sent</span><strong>{workout.maxSendGrade ?? "—"}</strong></div></div>}
-            {!fromCalendar && workout.note && <div className="detail-note"><span>NOTE</span><p>{workout.note}</p></div>}
+            {commentEdit?.id === workout.id ? <div className="day-comment editing"><textarea autoFocus aria-label="Comment" placeholder="How did it feel?" maxLength={2000} value={commentEdit.text} onChange={(event) => setCommentEdit({ id: workout.id, text: event.target.value })} /><div className="day-comment-actions"><button type="button" onClick={() => setCommentEdit(null)}>Cancel</button><button type="button" className="save" onClick={() => void saveComment(workout, commentEdit.text)}>Save</button></div></div>
+              : (workout.comment || (!fromCalendar && workout.note)) ? <button type="button" className="day-comment" onClick={() => setCommentEdit({ id: workout.id, text: workout.comment || workout.note || "" })}><span>COMMENT</span><p>{workout.comment || workout.note}</p></button>
+              : <button type="button" className="day-comment-add" onClick={() => setCommentEdit({ id: workout.id, text: "" })}>♡ Add a comment</button>}
             {workout.prHighlights?.length ? <p className="day-entry-pr"><b>PR</b> {workout.prHighlights.map((highlight) => `${PR_LIFT_NAMES[highlight.lift]} ${formatPrWeight(highlight.weight)} ${highlight.unit}`).join(" · ")}</p> : null}
             {workout.exercises.length > 0 && <div className="detail-exercises">{workout.exercises.map((exercise) => <section key={exercise.id}><h3>{exercise.name}<span>{exercise.sets.length} {exercise.sets.length === 1 ? "set" : "sets"}</span></h3>{exercise.sets.map((set, index) => <div key={set.id}><b>{index + 1}</b><strong>{set.weight || "—"} <small>{workout.unit ?? "kg"}</small></strong><strong>{set.reps || "—"} <small>reps</small></strong><p>{set.note || ""}</p></div>)}</section>)}</div>}
-            {activity !== "strength" && !workout.note && !(activity === "climbing" && (workout.maxAttemptGrade || workout.maxSendGrade)) && <p className="day-entry-empty">Logged {ACTIVITY_LABELS[activity].toLowerCase()} this day.</p>}
+            {activity !== "strength" && !workout.note && !workout.comment && commentEdit?.id !== workout.id && !(activity === "climbing" && (workout.maxAttemptGrade || workout.maxSendGrade)) && <p className="day-entry-empty">Logged {ACTIVITY_LABELS[activity].toLowerCase()} this day.</p>}
           </section>;
         })}</div></div></article>}
     </main>

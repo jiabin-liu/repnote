@@ -7,6 +7,7 @@ export type InputWorkout = {
   date?: string;
   unit?: "kg" | "lbs";
   note?: string;
+  comment?: string;
   source?: string;
   status?: "draft" | "completed";
   activity?: string;
@@ -31,7 +32,7 @@ export function upsertWorkoutStatements(db: D1Database, payload: InputWorkout, s
   if (!payload.id || !Array.isArray(payload.exercises)) throw new Error("Invalid workout");
   const date = payload.date ?? (payload.finishedAt || payload.startedAt || now).slice(0, 10);
   const statements = [
-    db.prepare("INSERT INTO workouts (id, user_id, workout_date, status, draft_of_workout_id, activity, max_attempt_grade, max_send_grade, climb_style, unit, general_note, started_at, finished_at, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET workout_date=excluded.workout_date, status=excluded.status, draft_of_workout_id=excluded.draft_of_workout_id, activity=excluded.activity, max_attempt_grade=excluded.max_attempt_grade, max_send_grade=excluded.max_send_grade, climb_style=excluded.climb_style, unit=excluded.unit, general_note=excluded.general_note, started_at=excluded.started_at, finished_at=excluded.finished_at, source=excluded.source, updated_at=excluded.updated_at").bind(payload.id, USER_ID, date, status, status === "draft" ? payload.draftOfWorkoutId ?? null : null, normalizeActivity(payload.activity), normalizeGrade(payload.maxAttemptGrade), normalizeGrade(payload.maxSendGrade), normalizeClimbStyle(payload.climbStyle), payload.unit === "lbs" ? "lbs" : "kg", payload.note ?? "", payload.startedAt ?? null, status === "completed" ? payload.finishedAt ?? now : null, payload.source ?? "manual", now, now),
+    db.prepare("INSERT INTO workouts (id, user_id, workout_date, status, draft_of_workout_id, activity, max_attempt_grade, max_send_grade, climb_style, unit, general_note, comment, started_at, finished_at, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET workout_date=excluded.workout_date, status=excluded.status, draft_of_workout_id=excluded.draft_of_workout_id, activity=excluded.activity, max_attempt_grade=excluded.max_attempt_grade, max_send_grade=excluded.max_send_grade, climb_style=excluded.climb_style, unit=excluded.unit, general_note=excluded.general_note, comment=excluded.comment, started_at=excluded.started_at, finished_at=excluded.finished_at, source=excluded.source, updated_at=excluded.updated_at").bind(payload.id, USER_ID, date, status, status === "draft" ? payload.draftOfWorkoutId ?? null : null, normalizeActivity(payload.activity), normalizeGrade(payload.maxAttemptGrade), normalizeGrade(payload.maxSendGrade), normalizeClimbStyle(payload.climbStyle), payload.unit === "lbs" ? "lbs" : "kg", payload.note ?? "", (payload.comment ?? "").slice(0, 2000), payload.startedAt ?? null, status === "completed" ? payload.finishedAt ?? now : null, payload.source ?? "manual", now, now),
     db.prepare("DELETE FROM workout_sets WHERE workout_exercise_id IN (SELECT id FROM workout_exercises WHERE workout_id = ?)").bind(payload.id),
     db.prepare("DELETE FROM workout_exercises WHERE workout_id = ?").bind(payload.id),
   ];

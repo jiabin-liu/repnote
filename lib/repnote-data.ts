@@ -78,6 +78,7 @@ export async function readWorkouts(options: ReadWorkoutsOptions) {
     finishedAt: row.finished_at ? String(row.finished_at) : null,
     unit: row.unit === "lbs" ? "lbs" : "kg",
     note: includeNotes ? String(row.general_note ?? "") : undefined,
+    comment: includeNotes ? String(row.comment ?? "") : undefined,
     source: String(row.source ?? "manual"),
     prHighlights: (highlightsByWorkout.get(String(row.id)) ?? []).map((highlight) => ({
       lift: String(highlight.lift_type),
