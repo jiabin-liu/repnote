@@ -836,6 +836,22 @@ function RepnoteApp() {
   };
   const exerciseOptions = exerciseLibrary.map((item) => item.name);
   const frequentExercises = exerciseLibrary.filter((item) => item.isFrequent);
+  // The last set (with a weight) from the most recent earlier session of this exercise, for the editor hint.
+  const exerciseKey = (name: string) => name.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
+  const lastSetFor = (name: string) => {
+    if (!draft) return null;
+    const key = exerciseKey(name);
+    const skipId = editingWorkoutId ?? draft.id;
+    const previous = history
+      .filter((workout) => workout.id !== skipId && workout.date <= draft.date && activityOf(workout) === "strength")
+      .sort((a, b) => b.date.localeCompare(a.date) || (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""));
+    for (const workout of previous) {
+      const exercise = workout.exercises.find((item) => exerciseKey(item.name) === key);
+      const set = exercise && [...exercise.sets].reverse().find((item) => item.weight !== "" && Number.isFinite(Number(item.weight)));
+      if (set) return { weight: set.weight, reps: set.reps, unit: workout.unit ?? "kg", date: workout.date };
+    }
+    return null;
+  };
   const addExercise = (name: string) => {
     const clean = name.trim();
     if (!clean || !draft) return;
@@ -1032,6 +1048,16 @@ function RepnoteApp() {
                 {draft.exercises.map((exercise, index) => (
                   <article className="exercise-card" key={exercise.id}>
                     <SwipeToDelete className="exercise-title-swipe" label={`Delete ${exercise.name}`} onDelete={() => setDraft({ ...draft, exercises: draft.exercises.filter((e) => e.id !== exercise.id) })}><div className="exercise-title"><span>{String(index + 1).padStart(2, "0")}</span><h3>{exercise.name}</h3></div></SwipeToDelete>
+                    {(() => {
+                      const last = lastSetFor(exercise.name);
+                      if (!last) return <p className="last-set none">First time logging this ♡</p>;
+                      const emptySetId = exercise.sets.find((item) => item.weight === "")?.id;
+                      const sameUnit = last.unit === (draft.unit ?? "lbs");
+                      return <button type="button" className="last-set" disabled={!emptySetId || !sameUnit} title={emptySetId && sameUnit ? "Use this weight" : undefined}
+                        onClick={() => { if (emptySetId && sameUnit) updateSet(exercise.id, emptySetId, "weight", last.weight); }}>
+                        <span>Last time</span><b>{last.weight} {last.unit}{last.reps ? ` × ${last.reps}` : ""}</b><small>{formatEntryDate(last.date)}</small>{emptySetId && sameUnit && <i>Use</i>}
+                      </button>;
+                    })()}
                     <div className="set-labels"><span>SET</span><span>WEIGHT ({(draft.unit ?? "lbs").toUpperCase()})</span><span>REPS</span><span>NOTE</span><i /></div>
                     {exercise.sets.map((set, setIndex) => (
                       <SwipeToDelete className="set-row-swipe" label={`Delete set ${setIndex + 1}`} onDelete={() => updateExercise(exercise.id, (ex) => ({ ...ex, sets: ex.sets.filter((s) => s.id !== set.id) }))} key={set.id}><div className="set-row">

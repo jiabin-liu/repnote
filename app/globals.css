@@ -617,3 +617,12 @@ html.detail-open .app-scroll,html.library-open .app-scroll,html.detail-open .top
 .day-comment-actions button.save { border-color:transparent; background:linear-gradient(135deg,#f6a9c4,#c4b0ef); color:#fff; }
 .day-comment-add { margin:4px 0 2px; padding:4px 0; border:0; background:none; color:#c8749a; font:600 13px var(--font-serif); }
 .has-photo-background .day-comment { background:rgba(255,240,246,.5); }
+/* Last session's final set, shown under each exercise in the editor */
+.last-set { display:flex; align-items:baseline; gap:8px; width:auto; max-width:100%; margin:2px 0 10px; padding:6px 12px; border:0; border-radius:999px; background:rgba(236,226,255,.75); color:var(--ink); text-align:left; }
+.last-set span { color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.last-set b { font:600 15px var(--font-serif); font-variant-numeric:tabular-nums; }
+.last-set small { color:var(--muted); font-size:11px; }
+.last-set i { margin-left:4px; padding:1px 8px; border-radius:999px; background:#fff; color:#a07ad8; font:700 11px var(--font-sans); font-style:normal; }
+button.last-set:not(:disabled) { cursor:pointer; }
+button.last-set:not(:disabled):active { transform:scale(.97); }
+.last-set.none { display:inline-block; color:var(--muted); font-size:12px; background:rgba(255,240,246,.7); }
