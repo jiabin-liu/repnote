@@ -92,6 +92,13 @@
       "when": 1793492296243,
       "tag": "0012_add_woodchop",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1793853569184,
+      "tag": "0013_add_cossack_squat",
+      "breakpoints": true
     }
   ]
 }

@@ -123,6 +123,8 @@ const imageFileToDataUrl = async (file: File, maxSide = 1600, quality = 0.82, ty
 const CUSTOM_EXERCISES_KEY = "repnote-custom-exercises-v1";
 const REPNOTE_VIEW_STATE = "repnoteView";
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+// Select the whole value on focus (deferred for iOS Safari) so typing replaces a prefilled number.
+const selectOnFocus = (event: { currentTarget: HTMLInputElement }) => { const input = event.currentTarget; setTimeout(() => input.select(), 0); };
 const emptySet = (): SetRow => ({ id: makeId(), weight: "", reps: "", note: "" });
 const formatClock = (iso: string) => new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 const formatDate = (iso: string) => new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", weekday: "short" }).format(new Date(iso));
@@ -858,10 +860,10 @@ function RepnoteApp() {
     setDraft({ ...draft, exercises: [...draft.exercises, { id: makeId(), name: clean, sets: [emptySet()] }] });
   };
   const isNewExerciseName = (name: string) => !exerciseOptions.some((option) => option.toLocaleLowerCase() === name.trim().toLocaleLowerCase());
-  const createLibraryExercise = (name: string) => {
+  const createLibraryExercise = (name: string, isFrequent = false) => {
     const clean = name.trim();
     if (!clean || !isNewExerciseName(clean)) return false;
-    const item = { id: `library-${makeId()}`, name: clean, frequency: 0, isFrequent: false };
+    const item = { id: `library-${makeId()}`, name: clean, frequency: 0, isFrequent };
     setExerciseLibrary((items) => [...items, item]);
     void fetch(`${apiBase}/exercises`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) }).then((response) => { if (!response.ok) throw new Error("Save failed"); }).catch(() => {
       setExerciseLibrary((items) => items.filter((candidate) => candidate.id !== item.id));
@@ -1042,7 +1044,7 @@ function RepnoteApp() {
               <label className="note-card"><span>Comment</span><textarea aria-label="Workout comment" placeholder="How did it feel? (optional)" value={draft.comment ?? draft.note ?? ""} onChange={(e) => setDraft({ ...draft, comment: e.target.value, note: "" })} /></label>
               <section className="session-unit-picker" aria-label="Weight unit"><div className={`weight-unit-toggle ${(draft.unit ?? "lbs") === "lbs" ? "lbs" : "kg"}`} role="group" aria-label="Weight unit"><span className="weight-unit-thumb" aria-hidden="true" /><button type="button" aria-pressed={(draft.unit ?? "lbs") === "lbs"} onClick={() => setDraft({ ...draft, unit: "lbs" })}>LBS</button><button type="button" aria-pressed={(draft.unit ?? "lbs") === "kg"} onClick={() => setDraft({ ...draft, unit: "kg" })}>KG</button></div></section>
 
-              <div className="quick-add"><div className="quick-add-options">{frequentExercises.map((item) => <button key={item.id} disabled={draft.exercises.some((ex) => ex.name === item.name)} onClick={() => addExercise(item.name)}>＋ {item.name}</button>)}<button className="rare-exercise-toggle" aria-expanded={showRareExercises} onClick={() => { setRareExercise(""); setShowRareExercises((value) => !value); }}><span>More exercises</span><ChevronDown aria-hidden="true" /></button></div>{showRareExercises && <ExerciseSearchPicker options={exerciseLibrary.filter((item) => !draft.exercises.some((exercise) => exercise.name === item.name))} query={rareExercise} onQueryChange={setRareExercise} onChoose={(name) => { addExercise(name); setRareExercise(""); setShowRareExercises(false); }} canCreate={isNewExerciseName} onCreate={(name) => { if (createLibraryExercise(name)) addExercise(name); setRareExercise(""); setShowRareExercises(false); }} />}</div>
+              <div className="quick-add"><div className="quick-add-options">{frequentExercises.map((item) => <button key={item.id} disabled={draft.exercises.some((ex) => ex.name === item.name)} onClick={() => addExercise(item.name)}>＋ {item.name}</button>)}<button className="rare-exercise-toggle" aria-expanded={showRareExercises} onClick={() => { setRareExercise(""); setShowRareExercises((value) => !value); }}><span>More exercises</span><ChevronDown aria-hidden="true" /></button></div>{showRareExercises && <ExerciseSearchPicker options={exerciseLibrary.filter((item) => !draft.exercises.some((exercise) => exercise.name === item.name))} query={rareExercise} onQueryChange={setRareExercise} onChoose={(name) => { addExercise(name); const chosen = exerciseLibrary.find((item) => item.name === name); if (chosen && !chosen.isFrequent) toggleFrequentExercise(chosen); setRareExercise(""); setShowRareExercises(false); }} canCreate={isNewExerciseName} onCreate={(name) => { if (createLibraryExercise(name, true)) addExercise(name); setRareExercise(""); setShowRareExercises(false); }} />}</div>
 
               <div className="exercise-list">
                 {draft.exercises.map((exercise, index) => (
@@ -1062,13 +1064,13 @@ function RepnoteApp() {
                     {exercise.sets.map((set, setIndex) => (
                       <SwipeToDelete className="set-row-swipe" label={`Delete set ${setIndex + 1}`} onDelete={() => updateExercise(exercise.id, (ex) => ({ ...ex, sets: ex.sets.filter((s) => s.id !== set.id) }))} key={set.id}><div className="set-row">
                         <b>{setIndex + 1}</b>
-                        <input inputMode="decimal" aria-label={`Set ${setIndex + 1} weight`} value={set.weight} onChange={(e) => updateSet(exercise.id, set.id, "weight", e.target.value)} />
-                        <input inputMode="numeric" aria-label={`Set ${setIndex + 1} reps`} value={set.reps} onChange={(e) => updateSet(exercise.id, set.id, "reps", e.target.value)} />
+                        <input inputMode="decimal" aria-label={`Set ${setIndex + 1} weight`} onFocus={selectOnFocus} value={set.weight} onChange={(e) => updateSet(exercise.id, set.id, "weight", e.target.value)} />
+                        <input inputMode="numeric" aria-label={`Set ${setIndex + 1} reps`} onFocus={selectOnFocus} value={set.reps} onChange={(e) => updateSet(exercise.id, set.id, "reps", e.target.value)} />
                         <input aria-label={`Set ${setIndex + 1} note`} value={set.note} onChange={(e) => updateSet(exercise.id, set.id, "note", e.target.value)} />
                         <i aria-hidden="true" />
                       </div></SwipeToDelete>
                     ))}
-                    <button className="add-set" onClick={() => updateExercise(exercise.id, (ex) => ({ ...ex, sets: [...ex.sets, emptySet()] }))}>＋ Add set</button>
+                    <button className="add-set" onClick={() => updateExercise(exercise.id, (ex) => { const previous = ex.sets.at(-1); return { ...ex, sets: [...ex.sets, { ...emptySet(), weight: previous?.weight ?? "", reps: previous?.reps ?? "" }] }; })}>＋ Add set</button>
                   </article>
                 ))}
               </div>
